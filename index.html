@@ -110,6 +110,7 @@ a:hover{text-decoration:underline}
 .b-B{background:#0d1f38;color:#58a6ff}
 .b-C{background:#1c2128;color:#8b949e}
 .b-type{background:#1c2128;color:#8b949e}
+.b-web20{background:#0d1f38;color:#58a6ff;border:1px solid #1f4070}
 .sc-note{font-size:.7rem;color:var(--muted);margin-top:3px;line-height:1.4;display:none}
 .sc:hover .sc-note{display:block}
 .sc-acts{display:flex;gap:3px;margin-top:4px}
@@ -156,7 +157,7 @@ a:hover{text-decoration:underline}
 /* Dark/Light mode */
 body.light{--bg:#f0f4f8;--s1:#fff;--s2:#f7fafc;--s3:#edf2f7;--border:#e2e8f0;--text:#1a202c;--muted:#718096;--muted2:#a0aec0;--green:#276749;--blue:#2b6cb0;--yellow:#744210;--red:#9b2c2c;--purple:#553c9a}
 body.light .header{background:linear-gradient(180deg,#e2e8f0,#f0f4f8)}
-body.light .filters,.body.light .sidebar{background:#fff}
+body.light .filters,body.light .sidebar{background:#fff}
 body.light .sc{background:#fff}
 body.light .sc:hover{background:#f7fafc}
 
@@ -329,6 +330,7 @@ body.light .sc:hover{background:#f7fafc}
     <div class="sidebar-item" onclick="quickFilter('type','document')">📄 Documents</div>
     <div class="sidebar-item" onclick="quickFilter('type','social')">📱 Social</div>
     <div class="sidebar-item" onclick="quickFilter('type','guestbook')">📖 Guestbooks</div>
+    <div class="sidebar-item" onclick="quickFilter('type','web20')">🌐 Web 2.0</div>
   </div>
   <div class="sidebar-section">
     <div class="sidebar-title">25 Categories</div>
@@ -362,6 +364,7 @@ body.light .sc:hover{background:#f7fafc}
     <option value="document">📄 Document</option>
     <option value="social">📱 Social</option>
     <option value="guestbook">📖 Guestbook</option>
+    <option value="web20">🌐 Web 2.0</option>
   </select>
   <select id="s-follow">
     <option value="">Follow: All</option>
@@ -9739,8 +9742,7 @@ function jumpCat(name){
   ['s-type','s-follow','s-diff','s-free','s-country'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
-  document.getElementById('s-da').value=20;
-  document.getElementById('s-da-v').textContent=20;
+  document.getElementById('s-da').value=0;
   document.getElementById('s-search').value='';
   document.querySelectorAll('.sidebar-item').forEach(i=>i.classList.remove('active'));
   // Show only the matching category
@@ -9765,12 +9767,19 @@ function jumpCat(name){
   document.getElementById('vis-ct').textContent = count + ' sites';
 }
 
-function pScore(s){ let sc=s.da; if(s.f==='dofollow')sc+=30; if(s.d==='easy')sc+=20; else if(s.d==='medium')sc+=10; if(s.c==='free')sc+=15; if(s.p==='A')sc+=25; return sc; }
+function pScore(s){ let sc=s.da; if(s.f==='dofollow')sc+=30; if(s.d==='easy')sc+=20; else if(s.d==='medium'||s.d==='med')sc+=10; if(s.c==='free')sc+=15; if(s.p==='A')sc+=25; return sc; }
 function daClass(da){ return da>=90?'b-da90':da>=80?'b-da80':da>=70?'b-da70':da>=60?'b-da60':da>=50?'b-da50':'b-da30'; }
-function typeLabel(t){ return {comment:'Comment',forum:'Forum',guest:'Guest Post',profile:'Profile',directory:'Directory',document:'Document',social:'Social',guestbook:'Guestbook'}[t]||t; }
+function typeLabel(t){ return {comment:'Comment',forum:'Forum',guest:'Guest Post',profile:'Profile',directory:'Directory',document:'Document',social:'Social',guestbook:'Guestbook',web20:'Web 2.0'}[t]||t; }
 
 Object.entries(CATS).forEach(([cat,data])=>{
-  data.sites.forEach(s=>{ s.cat=cat; allSites.push(s); });
+  data.sites.forEach(s=>{
+    s.cat=cat;
+    // Normalize difficulty values
+    if(s.d==='med') s.d='medium';
+    // Normalize bad cost values
+    if(s.c!=='free' && s.c!=='paid') s.c='free';
+    allSites.push(s);
+  });
 });
 
 // ── DEDUPLICATE: keep highest-DA entry per ROOT DOMAIN ──
@@ -9900,8 +9909,8 @@ function buildCard(s){
     <div class="sc-r2">
       <span class="b ${daClass(s.da)}">DA ${s.da}</span>
       <span class="b b-type">${typeLabel(s.t)}</span>
-      <span class="b b-${s.f}">${s.f==='dofollow'?'✅ DoFollow':s.f==='nofollow'?'NoFollow':'Mixed'}</span>
-      <span class="b b-${s.d}">${s.d.charAt(0).toUpperCase()+s.d.slice(1)}</span>
+      <span class="b ${ s.f==='dofollow'?'b-df':s.f==='nofollow'?'b-nf':'b-mx' }">${s.f==='dofollow'?'✅ DoFollow':s.f==='nofollow'?'NoFollow':'Mixed'}</span>
+      <span class="b ${ s.d==='easy'?'b-easy':s.d==='hard'?'b-hard':'b-med' }">${s.d.charAt(0).toUpperCase()+s.d.slice(1)}</span>
       <span class="b b-${s.c}">${s.c==='free'?'🆓':'💰'}</span>
       <span class="b b-${s.p}">⭐${s.p}</span>
       <span style="font-size:.62rem;color:var(--muted)">⏱${s.tm}m</span>
@@ -9911,7 +9920,7 @@ function buildCard(s){
       <button class="sc-btn" onclick="navigator.clipboard.writeText('https://${s.u}').then(()=>toast('Copied!'))">⧉ Copy</button>
       <button class="sc-btn" onclick="window.open('https://${s.u}','_blank')">↗ Visit</button>
       <button class="sc-btn" onclick="toggleNote('${s.u}')">📓 Note</button>
-      <button class="sc-btn" onclick="showGuide('${s.u}');switchTab('howto',document.querySelectorAll('.tab')[9])">📖 Guide</button>
+      <button class="sc-btn" onclick="showGuide('${s.u}');switchTab('howto',document.querySelector('.tab[onclick*=howto]'))">📖 Guide</button>
     </div>
     <textarea class="sc-note-inp${noteVal?' vis':''}" data-noteurl="${s.u}" placeholder="Notes: username, date, status..." onchange="saveNote('${s.u}',this.value)">${noteVal}</textarea>`;
   return card;
@@ -9969,7 +9978,7 @@ function applyFilters(){
   const sort   = document.getElementById('s-sort').value;
   let vis=0;
 
-  const hasFilter = q||type||follow||diff||free||country||minDa>20;
+  const hasFilter = q||type||follow||diff||free||country||minDa>0;
   // If a filter is active, render all cats so we can search through them
   if(hasFilter){
     document.querySelectorAll('.cat-wrap').forEach(wrap=>{
@@ -9992,7 +10001,7 @@ function applyFilters(){
       const show = da>=minDa && (!q||url.includes(q)||cat.toLowerCase().includes(q))
         && (!type||c.dataset.type===type)
         && (!follow||c.dataset.follow===follow)
-        && (!diff||c.dataset.diff===diff)
+        && (!diff||(c.dataset.diff===diff||(diff==='medium'&&c.dataset.diff==='med')))
         && (!free||c.dataset.free===free)
         && (!country||(c.dataset.country===country)||(!['ng','za','gh','ke','tz','eg','ma','ug','rw','et'].includes(country)&&c.dataset.country==='global'));
       c.style.display=show?'':'none';
@@ -10042,7 +10051,7 @@ function filterByCat(cat,el){
 }
 
 function cw_scroll(cat){ const el=document.querySelector(`.cat-wrap[data-cat="${cat}"]`); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }
-function clearFilters(){ document.querySelectorAll('.cat-wrap').forEach(cw=>cw.style.display=''); ['s-type','s-follow','s-diff','s-free','s-country'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); document.getElementById('s-da').value=20; document.getElementById('s-da-v').textContent=20; document.getElementById('s-search').value=''; document.querySelectorAll('.sidebar-item').forEach(i=>i.classList.remove('active')); document.querySelectorAll('.cat-wrap').forEach(cw=>cw.style.display=''); applyFilters(); }
+function clearFilters(){ document.querySelectorAll('.cat-wrap').forEach(cw=>cw.style.display=''); ['s-type','s-follow','s-diff','s-free','s-country'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); document.getElementById('s-da').value=0; document.getElementById('s-search').value=''; document.querySelectorAll('.sidebar-item').forEach(i=>i.classList.remove('active')); document.querySelectorAll('.cat-wrap').forEach(cw=>cw.style.display=''); applyFilters(); }
 
 // ═══ TOP 50 ═══
 const top50 = [...allSites].sort((a,b)=>pScore(b)-pScore(a)).slice(0,50);
@@ -10181,10 +10190,10 @@ function toast(msg){ toastEl.textContent=msg; toastEl.classList.add('on'); clear
 function toggleTheme(){
   document.body.classList.toggle('light');
   const btn = document.querySelector('.theme-btn');
-  btn.textContent = document.body.classList.contains('light') ? '🌙 Dark' : '☀️ Light';
+  btn.textContent = document.body.classList.contains('light') ? '🌙 Dark Mode' : '☀️ Light Mode';
   localStorage.setItem('bl_theme', document.body.classList.contains('light') ? 'light' : 'dark');
 }
-if(localStorage.getItem('bl_theme')==='light'){document.body.classList.add('light');document.querySelector('.theme-btn').textContent='🌙 Dark';}
+if(localStorage.getItem('bl_theme')==='light'){document.body.classList.add('light');document.querySelector('.theme-btn').textContent='🌙 Dark Mode';}
 
 // ── KEYBOARD SHORTCUTS ──
 let lastChecked = null;
@@ -10221,11 +10230,11 @@ function updateBulkBar(){
   else { bar.classList.remove('visible'); }
 }
 function bulkMarkDone(){
-  bulkSelected.forEach(url => { progress[url]={date:new Date().toLocaleDateString()}; const card=document.getElementById('sc-'+url.replace(/[^a-z0-9]/gi,'_')); if(card){card.classList.add('done');card.querySelector('.sc-url')?.classList.add('done-url');} });
+  bulkSelected.forEach(url => { progress[url]={date:new Date().toLocaleDateString()}; const card=document.querySelector('.sc[data-url="'+url+'"]'); if(card){card.classList.add('done');card.querySelector('.sc-url')?.classList.add('done-url');card.querySelector('.sc-cb').checked=true;} });
   save(); updateStats(); clearBulkSelection(); toast('✅ Marked '+bulkSelected.size+' as done');
 }
 function bulkMarkPending(){
-  bulkSelected.forEach(url => { delete progress[url]; const card=document.getElementById('sc-'+url.replace(/[^a-z0-9]/gi,'_')); if(card){card.classList.remove('done');card.querySelector('.sc-url')?.classList.remove('done-url');} });
+  bulkSelected.forEach(url => { delete progress[url]; const card=document.querySelector('.sc[data-url="'+url+'"]'); if(card){card.classList.remove('done');card.querySelector('.sc-url')?.classList.remove('done-url');card.querySelector('.sc-cb').checked=false;} });
   save(); updateStats(); clearBulkSelection(); toast('↩ Marked pending');
 }
 function bulkCopyURLs(){
@@ -12387,6 +12396,820 @@ const STRATEGIES = {
     dailyMix: {social:45,paste:35,document:20}
   }
 
+  ,
+
+  haro_journalist: {
+    name: '📰 HARO / Journalist Sourcing',
+    tagline: 'Respond to journalist queries to earn editorial DA 70+ links at scale',
+    hat: 'white', risk: 5,
+    tags: ['Editorial Links','DA 70+','Press Coverage'],
+    kpi: [{label:'Timeline',val:'1–3mo'},{label:'Links/Mo',val:'3–12'},{label:'Risk',val:'Zero'},{label:'Cost',val:'Free'},{label:'Best For',val:'Authority Domains'}],
+    phases: [
+      {label:'Phase 1',title:'Register on All Journalist Query Platforms',items:['helpareporter.com','sourcebottle.com','qwoted.com','featured.com','muckrack.com'],note:'HARO/Connectively sends 3 emails daily with 30-80 journalist queries each. Register as source on all platforms. Process emails within 60 minutes — journalists select sources within 2-4 hours.'},
+      {label:'Phase 2',title:'Build Expert Source Profile',items:[],note:'Profile needs: professional headshot, verifiable bio with credentials, company name and website, past media mentions. Journalists vet sources — a credible profile gets quoted, a generic one gets ignored.'},
+      {label:'Phase 3',title:'Filter and Prioritise Relevant Queries',items:[],note:'Filter for: your exact expertise area, publications you recognise (DA 50+), queries you can answer authoritatively. Quality response beats speed — be the most insightful respondent, not the fastest.'},
+      {label:'Phase 4',title:'Write Expert Pitch Responses',items:[],note:'Ideal HARO response: 3-5 sentences of unique expert insight, 1 specific data point or personal case study, name + title + company + website URL at bottom. Under 200 words. No fluff — journalists are selecting a quote, not reading an essay.'},
+      {label:'Phase 5',title:'Convert Single Features to Ongoing Sources',items:[],note:'When quoted: follow journalist on Twitter, send genuine thank-you, reference their article when pitching again. Repeat sources get preferential selection — build the relationship beyond a single feature.'}
+    ],
+    playbook: ['1. Register on HARO/Connectively, SourceBottle, Qwoted, Featured.com','2. Set email filters: HARO to priority inbox, not promotions','3. Build response templates for 3 core expertise areas','4. Respond within 60 minutes of query email','5. Include: insight + data point + personal experience + credentials','6. Track: journalist, publication, query topic, response sent','7. Google journalist name + article title 2 weeks after pitching to find if published','8. When featured: share the article widely — journalists notice amplification','9. Contact journalists who featured you: pitch a follow-up angle','10. Quality over volume: respond only to queries that match your genuine expertise'],
+    tiers: [
+      {tier:'DA 90+ Publications',label:'NYT, Forbes, Bloomberg',desc:'2-5% success rate. Single feature = substantial authority signal.',col:'var(--green)'},
+      {tier:'DA 50-90 Publications',label:'Industry blogs, trade press',desc:'15-25% success rate. Strong topical authority.',col:'var(--yellow)'},
+      {tier:'DA 30-50 Publications',label:'Niche blogs, emerging media',desc:'40%+ success rate. Good for building track record.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Branded (bio link)',pct:'60%',col:'var(--green)',rule:'Author bio attribution — always branded format'},
+      {type:'Naked URL',pct:'25%',col:'var(--blue)',rule:'"according to [name] at yourdomain.com"'},
+      {type:'Partial Match',pct:'15%',col:'var(--yellow)',rule:'Some publications link to specific resource mentioned in quote'}
+    ],
+    anchorRules: 'HARO links are fully editorial — you cannot control anchor text. Provide website URL clearly in response footer. This produces the most natural anchor distribution possible.',
+    velocity: [{mo:'Mo1',n:3},{mo:'Mo2',n:5},{mo:'Mo3',n:6},{mo:'Mo4',n:8},{mo:'Mo5',n:8},{mo:'Mo6',n:10},{mo:'Mo7',n:10},{mo:'Mo8',n:12},{mo:'Mo9',n:10},{mo:'Mo10',n:10},{mo:'Mo11',n:8},{mo:'Mo12',n:8}],
+    velocityNote: 'HARO links compound as reputation builds. Month 6+ journalists proactively seek you as a known expert source — velocity increases without proportional additional effort.',
+    competitor: ['1. Search competitor name in Google News — find which publications feature them as sources','2. Register on same platforms and respond to same query topics','3. Find journalists who regularly cover your niche — pitch them directly via Twitter/email'],
+    greyHat: 'WHITE HAT — HARO / JOURNALIST SOURCING\n• Zero penalty risk — editorial links from genuine media are the gold standard\n• Google explicitly validates editorial press links as highest-quality signal\n• This is the link building strategy Google wants you to use',
+    warnings: ['BEST: Highest-quality links available — genuine editorial press mentions','SAFE: Zero penalty risk — the gold standard','NOTE: Low short-term volume — 3-8 links/month requires consistent daily effort','BEST: Single DA 90+ press mention = 50+ blog comment links in authority'],
+    siteFilter: s => s.da >= 60 && s.t === 'guest',
+    dailyMix: {guest:80,profile:15,social:5}
+  },
+
+  podcast_guest_links: {
+    name: '🎙️ Podcast Guest Link Building',
+    tagline: 'Appear on niche podcasts to earn permanent show notes backlinks at scale',
+    hat: 'white', risk: 5,
+    tags: ['Podcast Links','Authority','Relationship Building'],
+    kpi: [{label:'Timeline',val:'2–4mo'},{label:'Links/Mo',val:'4–12'},{label:'Risk',val:'Zero'},{label:'Cost',val:'Time Only'},{label:'Best For',val:'Any Niche'}],
+    phases: [
+      {label:'Phase 1',title:'Build 100+ Target Podcast Database',items:['listennotes.com','rephonic.com','podchaser.com'],note:'Filter: niche-relevant topics, 500+ regular listeners, active (published within 30 days), accepts guests. Rephonic shows podcast DA, guest frequency, and contact info. Target DA 40+ podcast websites — their show notes pages receive ongoing traffic and link equity.'},
+      {label:'Phase 2',title:'Create a Professional Guest One-Sheet',items:[],note:'One-sheet: photo, expert bio (2-3 lines), 3-5 episode topic pitches with descriptions, past podcast appearances (social proof), contact info. Podcast hosts receive hundreds of pitches — a one-sheet separates experts from self-promoters.'},
+      {label:'Phase 3',title:'Pitch 10-15 Podcasts Per Week',items:[],note:'Pitch format: (a) mention specific episode you enjoyed, (b) explain why their audience benefits from your expertise, (c) propose 3 topic options, (d) attach one-sheet. 10 personalised pitches/week = 2-4 bookings/month.'},
+      {label:'Phase 4',title:'Deliver Maximum Value in Each Episode',items:[],note:'Reference your website as a resource when relevant — host will include in show notes. Avoid overt promotion — show notes link comes from being a great guest. Hosts who love you invite you back and recommend you to other hosts.'},
+      {label:'Phase 5',title:'Amplify Each Episode Across All Channels',items:[],note:'Share every episode: social media, email newsletter, your website media page. More amplification = happier host = more referrals to other podcasts = compound booking effect.'}
+    ],
+    playbook: ['1. Research 100 podcasts using Rephonic or ListenNotes — export contact emails','2. Create one-sheet: professional photo, bio, 5 topic pitches, past appearances','3. Write personalised pitch emails for each: reference specific episode, propose relevant topics','4. Send 10-15 pitches/week — expect 20-30% positive response rate with good personalisation','5. Record episodes same week as booking — never let bookings go cold','6. Before each episode: prepare 2-3 natural website mentions as genuine resources','7. After episode airs: share on LinkedIn, Twitter, email newsletter immediately','8. Create a media/podcast page on your site — feature all appearances with links','9. After 5+ appearances: social proof doubles your pitch conversion rate','10. Track: which podcasts include dofollow links in show notes — prioritise those hosts'],
+    tiers: [
+      {tier:'DA 60+ Podcast Sites',label:'Industry leaders, high-traffic shows',desc:'500+ listeners. Show notes rank in Google. Strongest link equity.',col:'var(--green)'},
+      {tier:'DA 30-60 Podcast Sites',label:'Niche-focused mid-size shows',desc:'100-500 listeners. Strong topical authority.',col:'var(--yellow)'},
+      {tier:'Emerging Shows',label:'DA 10-30, dedicated niche audience',desc:'Build relationships now — shows grow and DA increases over time.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Branded',pct:'65%',col:'var(--green)',rule:'"Dave from DaveSEO.com" — standard show notes credit format'},
+      {type:'Naked URL',pct:'25%',col:'var(--blue)',rule:'Full URL in show notes resource section'},
+      {type:'Partial Match',pct:'10%',col:'var(--yellow)',rule:'"SEO expert Dave" when host describes your expertise'}
+    ],
+    anchorRules: 'Podcast links are controlled by the host — provide URL clearly during episode. Most show notes use: "Guest: [Name] — [Website URL]" format. Fully natural editorial anchor distribution.',
+    velocity: [{mo:'Mo1',n:2},{mo:'Mo2',n:4},{mo:'Mo3',n:6},{mo:'Mo4',n:8},{mo:'Mo5',n:8},{mo:'Mo6',n:10},{mo:'Mo7',n:10},{mo:'Mo8',n:8},{mo:'Mo9',n:8},{mo:'Mo10',n:6},{mo:'Mo11',n:6},{mo:'Mo12',n:6}],
+    velocityNote: 'Podcast links compound via referral network: hosts refer you to other hosts. Month 4+ velocity accelerates without proportional additional pitching. Show notes pages accumulate link equity indefinitely.',
+    competitor: ['1. Search "[competitor name] podcast" — find every show they appeared on','2. Pitch same shows with a different perspective on the topic','3. Find shows where competitor was low-value — easy win to be the better guest'],
+    greyHat: 'WHITE HAT — PODCAST GUEST LINKS\n• Zero penalty risk — genuine editorial media appearance\n• Links are in show notes as natural resource mentions\n• Podcast SEO is underutilised — low competition in most niches',
+    warnings: ['BEST: Zero penalty risk','BEST: Show notes links are permanent — podcast episodes stay published indefinitely','BEST: Referral traffic from podcast audiences converts 3-5x vs average traffic','NOTE: Requires genuine expertise — poor guests are not re-invited'],
+    siteFilter: s => s.da >= 40 && s.t === 'guest',
+    dailyMix: {guest:75,profile:20,social:5}
+  },
+
+  scholarship_edu_links: {
+    name: '🎓 Scholarship .EDU Link Building',
+    tagline: 'Create a scholarship programme to earn .edu backlinks from university resource pages',
+    hat: 'white', risk: 10,
+    tags: ['.EDU Links','High Authority','Scholarship'],
+    kpi: [{label:'Timeline',val:'3–6mo'},{label:'Links',val:'10–50 .edu'},{label:'Risk',val:'Very Low'},{label:'Cost',val:'$500–$5000'},{label:'Best For',val:'Authority Building'}],
+    phases: [
+      {label:'Phase 1',title:'Create a Genuine Scholarship Programme',items:[],note:'Requirements: clear eligibility criteria (university students, specific field), defined award amount ($500 minimum), application form with essay questions, annual cycle. Host on yourdomain.com/scholarship — this page gets the links.'},
+      {label:'Phase 2',title:'Build Database of 200+ Universities',items:[],note:'Target: universities with scholarship listing pages (search: site:*.edu "external scholarships"), universities in your industry field, community colleges (easier to get listed). Each university financial aid office maintains external scholarship databases.'},
+      {label:'Phase 3',title:'Email University Financial Aid Departments',items:[],note:'Template: "We are offering a [amount] scholarship for [eligible students]. Application deadline is [date]. I would like to request listing on your scholarship resource page." Financial aid offices actively maintain these pages — 20-30% listing rate.'},
+      {label:'Phase 4',title:'Announce Winners Publicly',items:[],note:'After awarding: publish announcement on your site, send press release to university media outlets, share on social. Universities often link again in their news section when a student wins — double link from single relationship.'},
+      {label:'Phase 5',title:'Renew Scholarship for Compounding Links',items:[],note:'Annual scholarship = annual outreach cycle. Universities that listed you year 1 keep the link permanently. Year 2 adds new universities. A 3-year programme compounds to 50-150+ .edu links.'}
+    ],
+    playbook: ['1. Set up scholarship page: eligibility, amount, essay questions, deadline','2. Create application form — Google Form is sufficient','3. Set minimum $500-$1000 to be taken seriously by financial aid offices','4. Research 200+ universities: search "site:*.edu external scholarships"','5. Email financial aid offices: concise, professional, include direct scholarship page link','6. Reach out to university departments aligned to your niche','7. Follow up once after 2 weeks','8. Track applications and award scholarship genuinely','9. After awarding: send winner announcement to university for their news page','10. Expand annually: add 50 new universities each cycle'],
+    tiers: [
+      {tier:'Research Universities',label:'State flagships, DA 80-99',desc:'Hardest to get listed. Highest authority. Financial aid is selective.',col:'var(--green)'},
+      {tier:'Mid-Size Universities',label:'Regional universities, DA 50-80',desc:'Most productive tier. Financial aid offices responsive.',col:'var(--yellow)'},
+      {tier:'Community Colleges',label:'DA 30-50, highest listing rate',desc:'Easiest to get listed. Good starting point for building .edu count.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Branded',pct:'55%',col:'var(--green)',rule:'"[Company Name] Scholarship" — standard university listing format'},
+      {type:'Partial Match',pct:'25%',col:'var(--yellow)',rule:'"[Industry] Scholarship from [Company]"'},
+      {type:'Naked URL',pct:'20%',col:'var(--blue)',rule:'URL alongside scholarship name in database format'}
+    ],
+    anchorRules: '.EDU link anchors are chosen by university staff — title your scholarship "[Brand] [Year] Scholarship" and this becomes the natural anchor text on every listing.',
+    velocity: [{mo:'Mo1',n:0},{mo:'Mo2',n:0},{mo:'Mo3',n:5},{mo:'Mo4',n:10},{mo:'Mo5',n:8},{mo:'Mo6',n:5},{mo:'Mo7',n:3},{mo:'Mo8',n:2},{mo:'Mo9',n:2},{mo:'Mo10',n:15},{mo:'Mo11',n:10},{mo:'Mo12',n:8}],
+    velocityNote: 'Months 1-2: setup and outreach. Month 3+: listings appear. Month 10+: second annual cycle adds new universities while year 1 links remain permanently.',
+    competitor: ['1. Search "[competitor] scholarship" — find their programme and which universities link to it','2. Target all same universities — your scholarship alongside competitor\'s is immediate parity','3. Offer higher amount than competitors — financial aid offices list by merit'],
+    greyHat: 'WHITE HAT — SCHOLARSHIP .EDU LINKS\n• Google explicitly endorses earning .edu links through genuine scholarship programmes\n• Must award scholarship genuinely — fake scholarship is deceptive and violates guidelines\n• Annual renewal creates permanent link compounding',
+    warnings: ['BEST: .EDU links from scholarship listings are fully Google-approved','BEST: Single major university .EDU link can equal 20+ DA 50 guest post links','WARN: Must award scholarship genuinely — fake scholarship is fraudulent','BEST: Annual renewal creates compounding link growth over years'],
+    siteFilter: s => s.da >= 70 && (s.t==='directory' || s.t==='profile'),
+    dailyMix: {directory:60,profile:30,social:10}
+  },
+
+  resource_page_links: {
+    name: '📋 Resource Page Link Building',
+    tagline: 'Systematically pitch your content to curated resource and links pages',
+    hat: 'white', risk: 5,
+    tags: ['Resource Pages','Editorial','Scalable'],
+    kpi: [{label:'Timeline',val:'1–3mo'},{label:'Links/Mo',val:'5–20'},{label:'Risk',val:'Zero'},{label:'Cost',val:'Time'},{label:'Best For',val:'Content-Rich Sites'}],
+    phases: [
+      {label:'Phase 1',title:'Find Curated Resource Pages in Your Niche',items:[],note:'Google searches: "[niche] resources", "[niche] useful links", "intitle:resources [keyword]", "inurl:resources [keyword]". Also: Ahrefs Content Explorer filtering for pages with "resources" in title and 20+ referring domains.'},
+      {label:'Phase 2',title:'Filter for Active and Linkable Resource Pages',items:[],note:'Qualify each page: (a) updated in last 12 months, (b) genuinely curated not a spam link dump, (c) your content fills a visible gap, (d) contact details findable. Dead or abandoned resource pages waste outreach effort.'},
+      {label:'Phase 3',title:'Match Your Best Content to Each Page',items:[],note:'Each resource page has a theme — match your best existing content to it. If you lack relevant content for a target page: create it first before pitching. A resource page listing "Top SEO Tools" and you have a comprehensive tools comparison = perfect fit.'},
+      {label:'Phase 4',title:'Personalised Pitch to Each Site Owner',items:[],note:'Pitch: (a) acknowledge the resource page and mention 1-2 specific resources already listed, (b) explain why your resource fills a gap, (c) provide direct URL, (d) keep under 100 words. Acceptance rate with personalised pitch: 15-25%. Generic: 2-5%.'},
+      {label:'Phase 5',title:'Track and Follow Up Once',items:[],note:'Follow up once after 7-10 days. Never follow up more than once. Track: pitched, accepted, declined, no response. No-response after follow-up = move on.'}
+    ],
+    playbook: ['1. Run 10 Google searches for resource pages — export all qualifying URLs','2. Use Ahrefs to check DA — prioritise DA 40+ pages','3. Review each page: what is included, what is missing, where does your content fit','4. Match your best content to each resource page gap','5. Find site owner contact: About page, Contact form, LinkedIn','6. Write personalised pitch: mention their page, identify gap, propose your URL','7. Send 15-20 pitches per week with personalisation','8. Follow up once after 7 days','9. Track all pitches in spreadsheet','10. Refine pitch approach quarterly based on acceptance rates'],
+    tiers: [
+      {tier:'DA 70+ Resource Pages',label:'Industry authority sites, universities',desc:'Highest equity. Pitch only your absolute best content.',col:'var(--green)'},
+      {tier:'DA 40-70 Resource Pages',label:'Active niche blogs, industry sites',desc:'Core volume tier. 15-25% acceptance rate.',col:'var(--yellow)'},
+      {tier:'DA 20-40 Resource Pages',label:'Niche community sites, emerging blogs',desc:'30-40% acceptance rate. Good for topical diversity.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Content Title',pct:'55%',col:'var(--green)',rule:'Resource page lists your content by title — natural anchor text'},
+      {type:'Branded',pct:'25%',col:'var(--blue)',rule:'"By [Brand Name]" attribution alongside resource title'},
+      {type:'Partial Match',pct:'20%',col:'var(--yellow)',rule:'Site owner paraphrases title with keyword context'}
+    ],
+    anchorRules: 'Optimise content titles to naturally include partial match keywords — becomes your anchor on every resource page that lists it. "[Keyword] Complete Guide" as content title = natural partial match anchor everywhere.',
+    velocity: [{mo:'Mo1',n:5},{mo:'Mo2',n:10},{mo:'Mo3',n:12},{mo:'Mo4',n:15},{mo:'Mo5',n:15},{mo:'Mo6',n:12},{mo:'Mo7',n:10},{mo:'Mo8',n:10},{mo:'Mo9',n:8},{mo:'Mo10',n:8},{mo:'Mo11',n:8},{mo:'Mo12',n:8}],
+    velocityNote: 'Resource page links compound as content library grows. Sites that list your content once often list additional resources you publish later.',
+    competitor: ['1. Use Ahrefs to find which resource pages link to competitors — pitch all of them','2. Create content specifically better than what resource pages currently list','3. Find resource pages in niche that list competitor content — pitch same pages with your superior resource'],
+    greyHat: 'WHITE HAT — RESOURCE PAGE LINK BUILDING\n• Zero penalty risk — editorial listings on curated resource pages\n• Google explicitly endorses resource pages as valid link targets\n• No manipulation: suggesting genuinely useful content for curation',
+    warnings: ['BEST: Zero penalty risk','BEST: Resource page links are permanent','WARN: Requires genuinely excellent content to be accepted','BEST: A comprehensive guide listed on 20+ resource pages creates permanent passive link acquisition'],
+    siteFilter: s => s.da >= 40 && (s.t==='guest' || s.t==='directory'),
+    dailyMix: {guest:65,directory:25,profile:10}
+  },
+
+  unlinked_mention_conversion: {
+    name: '🔗 Unlinked Brand Mention Conversion',
+    tagline: 'Find every brand mention without a link and convert them to backlinks',
+    hat: 'white', risk: 5,
+    tags: ['Brand Mentions','Link Reclamation','Easy Wins'],
+    kpi: [{label:'Timeline',val:'2–6wks'},{label:'Conversion Rate',val:'30–60%'},{label:'Risk',val:'Zero'},{label:'Cost',val:'Tool + Time'},{label:'Best For',val:'Established Brands'}],
+    phases: [
+      {label:'Phase 1',title:'Find All Unlinked Brand Mentions',items:['ahrefs.com/content-explorer','mention.com','brand24.com','google.com/alerts'],note:'Ahrefs Content Explorer: search brand name, filter "one article per domain", filter "no backlink to target." Returns every page mentioning your brand without linking. Google Alerts: instant notification of new mentions.'},
+      {label:'Phase 2',title:'Filter for Actionable Conversion Targets',items:[],note:'Remove: social media posts, your own content, negative context mentions, DA under 20. Prioritise: editorial articles on DA 40+ sites, "best of" lists, product reviews.'},
+      {label:'Phase 3',title:'Review How Each Mention Is Written',items:[],note:'Read every qualifying mention. Understand: why they mentioned your brand, what context, whether adding a link benefits their readers. Personalise outreach based on this context.'},
+      {label:'Phase 4',title:'Email Authors to Add the Link',items:[],note:'Pitch: "Thank you for mentioning [Brand] in [article]. I noticed the mention does not include a link — it might help your readers find us more easily. Our URL is [URL]. Would you be able to add it?" Response rate: 30-60%. Highest-conversion link building outreach technique.'},
+      {label:'Phase 5',title:'Set Up Permanent Mention Monitoring',items:[],note:'Google Alerts for brand name, misspellings, product names, key personnel. Check Ahrefs monthly. Each new unlinked mention = new conversion opportunity. Established brands generate 10-30 opportunities per month passively.'}
+    ],
+    playbook: ['1. Set up Google Alerts for brand name, product names, common misspellings','2. Monthly: run Ahrefs Content Explorer → brand name → filter no backlink','3. Export mention list: URL, DA, mention context, author email','4. Find author email: LinkedIn, Contact page, Hunter.io','5. Write personalised conversion email: thank, note mention, request link addition','6. Send 20-30 conversion requests per week','7. Follow up once after 5 days','8. Track: sent, responded, converted, declined','9. Analyse declined: sometimes negative context = intentional omission — respect that','10. Monthly habit: 30 minutes searching for new mentions'],
+    tiers: [
+      {tier:'DA 70+ Mentions',label:'Press articles, authority blogs',desc:'Highest conversion value. Personalised individual outreach. Convert at 30-40%.',col:'var(--green)'},
+      {tier:'DA 40-70 Mentions',label:'Industry blogs, review sites',desc:'Core volume tier. Convert at 40-55%.',col:'var(--yellow)'},
+      {tier:'DA 20-40 Mentions',label:'Niche community sites',desc:'Fastest to convert (50-60%). Good for volume.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Branded',pct:'70%',col:'var(--green)',rule:'Brand name is the existing mention text — natural branded anchor when linked'},
+      {type:'Partial Match',pct:'20%',col:'var(--yellow)',rule:'Author sometimes adds service descriptor alongside brand name'},
+      {type:'Naked URL',pct:'10%',col:'var(--blue)',rule:'Some authors prefer to add URL alongside existing brand name'}
+    ],
+    anchorRules: 'Unlinked mention conversion produces naturally branded anchors — the existing mention text becomes the anchor. One of the most natural anchor distributions possible.',
+    velocity: [{mo:'Mo1',n:10},{mo:'Mo2',n:15},{mo:'Mo3',n:12},{mo:'Mo4',n:12},{mo:'Mo5',n:10},{mo:'Mo6',n:10},{mo:'Mo7',n:8},{mo:'Mo8',n:8},{mo:'Mo9',n:8},{mo:'Mo10',n:8},{mo:'Mo11',n:6},{mo:'Mo12',n:6}],
+    velocityNote: 'Highest conversion rate of any link building strategy. As brand grows, monthly mention volume increases — passive conversion opportunities without additional outreach investment.',
+    competitor: ['1. Search competitor brand in Ahrefs Content Explorer — find their unlinked mentions and create competing content on those same sites','2. Find sites that mention competitors with links but mention you without — direct equity gap'],
+    greyHat: 'WHITE HAT — UNLINKED MENTION CONVERSION\n• Zero risk — asking for link to content already referencing your brand\n• 30-60% conversion rate is the highest of any outreach strategy\n• The link is genuinely helpful to the author\'s readers',
+    warnings: ['BEST: Highest conversion rate — 30-60% vs 5-10% for cold pitches','BEST: Zero penalty risk','BEST: Branded anchor distribution is optimal','WARN: Requires existing brand presence — new brands with no mentions cannot use this'],
+    siteFilter: s => s.da >= 40 && s.t === 'guest',
+    dailyMix: {guest:70,profile:20,social:10}
+  },
+
+  original_data_study: {
+    name: '📊 Data Study & Original Research',
+    tagline: 'Publish original industry data that journalists and bloggers naturally cite with links',
+    hat: 'white', risk: 5,
+    tags: ['Linkable Asset','Original Research','Passive Links'],
+    kpi: [{label:'Timeline',val:'1–3mo build, then passive'},{label:'Links',val:'10–500+ per study'},{label:'Risk',val:'Zero'},{label:'Cost',val:'Research Budget'},{label:'Best For',val:'Authority Niches'}],
+    phases: [
+      {label:'Phase 1',title:'Plan a Study That Fills a Data Gap',items:[],note:'Best topics: industry surveys (primary data), trend reports (aggregate public data into insights), benchmarking studies, salary/pricing reports. Key: data must not exist elsewhere. Original is the critical requirement.'},
+      {label:'Phase 2',title:'Gather Primary or Aggregate Data',items:[],note:'Survey (SurveyMonkey, Typeform): target 200+ respondents for credibility. Data scraping: aggregate public data (job postings, pricing). Own customer data: anonymised insights from client base. Third-party API: process and visualise what others leave raw.'},
+      {label:'Phase 3',title:'Publish with Maximum SEO and Shareability',items:[],note:'Study page: compelling headline with key finding, methodology section, data visualisations, key stats in bold pullquotes, embed code for charts (bloggers embed with attribution link), citation instructions at bottom.'},
+      {label:'Phase 4',title:'Pitch Journalists Before and After Publication',items:[],note:'Pre-publication: "Embargo until [date] — releasing our [Year] [Industry] Report with data on [key finding]." Post-publication: pitch bloggers who cover your beat with 3 key stats embedded in pitch.'},
+      {label:'Phase 5',title:'Republish and Update Annually',items:[],note:'Annual updates generate new citation cycles. "[Year] Annual Report" becomes a franchise journalists return to yearly. Year 1: 15 links. Year 3 update: 50 links as journalists now know to look for your annual data.'}
+    ],
+    playbook: ['1. Identify data gaps: what stats does your industry cite from outdated/paywalled sources?','2. Design study: survey methodology, 200+ respondents, target questions','3. Collect data using SurveyMonkey — promote via social, email, LinkedIn','4. Extract 5-10 headline statistics — these are your most linkable assets','5. Design visualisations using Datawrapper or Flourish','6. Publish with methodology, full data, embeddable charts, citation instructions','7. Build press list: journalists who cover your niche + bloggers who cite stats','8. Send embargo pitch 1 week before publication','9. After publication: send summary pitch with 3 key stats to full press list','10. Submit to SSRN and ResearchGate for academic citations'],
+    tiers: [
+      {tier:'Primary Survey Data',label:'Your original survey, 200+ respondents',desc:'Most authoritative. Journalists prefer primary data.',col:'var(--green)'},
+      {tier:'Aggregated Public Data',label:'Processed and visualised public datasets',desc:'Faster to produce. Strong if insights are genuinely new.',col:'var(--yellow)'},
+      {tier:'Proprietary Data',label:'Anonymised customer/industry insights',desc:'Unique positioning — no one else can reproduce.',col:'var(--blue)'}
+    ],
+    anchorMix: [
+      {type:'Study Title',pct:'40%',col:'var(--green)',rule:'"[Brand] [Year] [Industry] Report" — becomes anchor when journalists cite by name'},
+      {type:'Branded',pct:'35%',col:'var(--blue)',rule:'"According to [Brand]" — standard journalism citation format'},
+      {type:'Partial Match',pct:'25%',col:'var(--yellow)',rule:'"[Keyword] statistics from [Brand]"'}
+    ],
+    anchorRules: 'Optimise study title to include primary keyword: "[Brand] SEO Industry Salary Report 2026" = natural partial match anchor on every citation.',
+    velocity: [{mo:'Mo1',n:0},{mo:'Mo2',n:0},{mo:'Mo3',n:15},{mo:'Mo4',n:25},{mo:'Mo5',n:20},{mo:'Mo6',n:10},{mo:'Mo7',n:5},{mo:'Mo8',n:5},{mo:'Mo9',n:3},{mo:'Mo10',n:3},{mo:'Mo11',n:25},{mo:'Mo12',n:20}],
+    velocityNote: 'Months 1-2: data collection. Month 3: publication + press blitz. Months 4-5: peak citation. Month 11: annual update releases — new citation cycle begins.',
+    competitor: ['1. Find what statistics competitors cite most — these are your data gap opportunities','2. Find competitor methodology gaps and publish a more rigorous version','3. When your study is published journalists looking for competitor data will find yours instead'],
+    greyHat: 'WHITE HAT — ORIGINAL DATA STUDY\n• Zero penalty risk — earning citations for genuinely original research\n• Google explicitly values original research as top-tier link building\n• A single successful study earns links indefinitely',
+    warnings: ['BEST: Zero penalty risk — citation links are Google\'s ideal link building model','BEST: A successful study earns links passively years after publication','WARN: Requires genuine data investment — low-quality fake studies earn zero citations','BEST: Annual update creates recurring press and citation cycle'],
+    siteFilter: s => s.da >= 50 && s.t === 'guest',
+    dailyMix: {guest:70,profile:20,social:10}
+  },
+
+  free_tool_links: {
+    name: '🛠️ Free Tool & Calculator Links',
+    tagline: 'Build free tools that earn passive links indefinitely from every user who embeds or shares them',
+    hat: 'white', risk: 5,
+    tags: ['Passive Links','Tools','Linkable Asset'],
+    kpi: [{label:'Timeline',val:'1–2mo build, then passive'},{label:'Links',val:'Compounding indefinitely'},{label:'Risk',val:'Zero'},{label:'Cost',val:'Dev Time'},{label:'Best For',val:'Any Niche'}],
+    phases: [
+      {label:'Phase 1',title:'Find a Tool Your Audience Needs Daily',items:[],note:'Best free tools: calculators (ROI, pricing, tax), generators (templates, headlines), graders (website audit, scores), converters, checkers. Criteria: solves recurring need, saves time, shareable, no dominant free version already exists.'},
+      {label:'Phase 2',title:'Build the Tool',items:[],note:'Code: hire developer ($200-$1000 for simple calculator). No-code: Outgrow, Google Sheets published as calculator. Minimum viable: functional, mobile-responsive, fast-loading. Usefulness is the variable that determines link success.'},
+      {label:'Phase 3',title:'Add Embeddable Embed Code',items:[],note:'Create iframe embed code: <iframe src="yourdomain.com/tool" width="600" height="400">. When bloggers embed your tool, attribution link included by default. Each embed = permanent dofollow link. Tools with embed codes earn 3-5x more links than those without.'},
+      {label:'Phase 4',title:'Submit to Tool Directories and Communities',items:['producthunt.com','tooldb.co','alternativeto.net','capterra.com','g2.com'],note:'Product Hunt launch: instant exposure to 100,000+ users. Tool directories: permanent listings with dofollow links. Reddit: post to relevant subreddit "I built a free [tool] for [niche]."'},
+      {label:'Phase 5',title:'Pitch Tool to Resource Pages and Roundups',items:[],note:'Actively pitch: "best [niche] tools" roundup posts, resource pages that list tools, "free tools for [profession]" compilations. Tool listed in a "best free SEO tools" roundup earns links from every future reader who writes their own roundup version.'}
+    ],
+    playbook: ['1. Research tool concepts: what do people search for as calculators/generators/checkers in your niche?','2. Validate: search "free [tool name]" — if results are paid or low-quality, you have a gap','3. Build MVP: functional, mobile, fast-loading','4. Add embed code feature — iframe snippet at bottom of tool page','5. Launch on Product Hunt on Tuesday-Thursday','6. Submit to 10+ tool directories','7. Post to relevant subreddits in helpful tone','8. Build outreach list: "best [niche] tools" blog posts — pitch yours for inclusion','9. Pitch resource pages that list similar tools','10. Track tool page backlinks monthly — passive link building at work'],
+    tiers: [
+      {tier:'Embeddable Widget Tools',label:'Calculators, graders, converters',desc:'Embed code = passive link on every site that uses tool. Highest compounding value.',col:'var(--green)'},
+      {tier:'Web App Tools',label:'SEO auditors, generators, checkers',desc:'Users link to share. Tool directory listings. Product Hunt exposure.',col:'var(--yellow)'},
+      {tier:'Template/Resource Tools',label:'Template libraries, checklists',desc:'Download links, resource page inclusions.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Tool Name',pct:'45%',col:'var(--green)',rule:'"[Brand] [Tool Name] Calculator" — embed attribution and resource mentions'},
+      {type:'Branded',pct:'30%',col:'var(--blue)',rule:'"by [Brand]" attribution in embed code and directories'},
+      {type:'Partial Match',pct:'25%',col:'var(--yellow)',rule:'"free [keyword] tool" — how bloggers describe it in roundups'}
+    ],
+    anchorRules: 'Name tool strategically: "[Brand] SEO ROI Calculator" creates natural partial match anchor on every resource mention. Embed code attribution is branded — most natural anchor possible.',
+    velocity: [{mo:'Mo1',n:0},{mo:'Mo2',n:10},{mo:'Mo3',n:20},{mo:'Mo4',n:15},{mo:'Mo5',n:12},{mo:'Mo6',n:10},{mo:'Mo7',n:8},{mo:'Mo8',n:8},{mo:'Mo9',n:6},{mo:'Mo10',n:6},{mo:'Mo11',n:6},{mo:'Mo12',n:6}],
+    velocityNote: 'Month 2: launch spike from Product Hunt and submission wave. Month 3+: compounding passive links as tool is discovered and embedded. Continues earning links for years after launch.',
+    competitor: ['1. Find competitor tools — what free tools are they missing?','2. Build better or simpler version of competitor tools','3. Find tools on Product Hunt with 500+ upvotes — build a complementary tool'],
+    greyHat: 'WHITE HAT — FREE TOOL LINKS\n• Zero penalty risk — earning links via genuinely useful tools\n• Passive compounding: one tool earns links for 5-10 years\n• Embed code links are editorial by nature',
+    warnings: ['BEST: Zero penalty risk — gold standard of passive white hat link building','BEST: Compounding passive links — tool earns links indefinitely','WARN: Requires upfront dev investment — returns compound over years','BEST: Tools also generate direct leads and email signups — dual ROI'],
+    siteFilter: s => s.da >= 40 && (s.t==='directory' || s.t==='profile' || s.t==='guest'),
+    dailyMix: {guest:50,directory:30,profile:20}
+  },
+
+  testimonial_links: {
+    name: '⭐ Testimonial Link Building',
+    tagline: 'Write vendor testimonials and earn dofollow links from their testimonials pages',
+    hat: 'white', risk: 5,
+    tags: ['Easy Wins','Dofollow','Branded Links'],
+    kpi: [{label:'Timeline',val:'1–4wks'},{label:'Links/Mo',val:'5–20'},{label:'Risk',val:'Zero'},{label:'Cost',val:'30 min/link'},{label:'Best For',val:'Any Site'}],
+    phases: [
+      {label:'Phase 1',title:'List Every Tool and Service You Use',items:[],note:'Complete list: every SaaS tool, software, service, supplier you use or have used. Categories: CRM, hosting, email, SEO, design, project management, communication. 20+ years of business tool usage = 20+ testimonial opportunities.'},
+      {label:'Phase 2',title:'Find Which Vendors Publish Customer Testimonials',items:[],note:'Visit each vendor site: look for /testimonials, /customers, /case-studies. Check if existing testimonials include links to customer websites — if yes, they will link to yours. Tools with active testimonial pages convert at 70-80%.'},
+      {label:'Phase 3',title:'Write Specific, Credible Testimonials',items:[],note:'Formula: (a) specific problem you had before using the tool, (b) how it solved it with numbers or outcomes, (c) who you are + company name + URL. Specific testimonials get published. Generic praise rarely gets published. Aim for 50-100 words.'},
+      {label:'Phase 4',title:'Submit Via Official Channels',items:[],note:'Submit via: vendor contact form, testimonial submission form, direct email to marketing team, Twitter/LinkedIn mention. Include full name, title, company, website URL explicitly.'},
+      {label:'Phase 5',title:'Check Publication and Expand to Case Studies',items:[],note:'After 2 weeks: check vendor testimonial page. Follow up once if not published. If published: request whether vendor wants to expand to a full case study — case studies earn more prominent links and additional SEO benefit.'}
+    ],
+    playbook: ['1. List every tool/service genuinely used in last 3 years','2. Visit each vendor site — check if testimonial pages link to customers','3. Prioritise vendors whose testimonials link (dofollow) to customers','4. Write specific, outcome-focused testimonial: problem, solution, result + URL','5. Submit to marketing team directly','6. Include: name, title, company, website URL explicitly','7. Wait 2 weeks — follow up once if not published','8. After publication: share on social channels (goodwill + amplification)','9. Expand best relationships to full case studies','10. Continue acquiring new tool relationships — each new vendor is a new opportunity'],
+    tiers: [
+      {tier:'DA 60+ Vendors',label:'Major SaaS tools',desc:'HubSpot (DA 93), Salesforce (DA 91), SEMrush (DA 91). High authority testimonial links.',col:'var(--green)'},
+      {tier:'DA 40-60 Vendors',label:'Mid-size SaaS, industry tools',desc:'Core volume tier. Most productive testimonial link building category.',col:'var(--yellow)'},
+      {tier:'DA 20-40 Vendors',label:'Small tools, local services',desc:'Quick to earn. Good for anchor diversity and topical relevance.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Branded',pct:'70%',col:'var(--green)',rule:'"[Company Name]" — standard testimonial credit format'},
+      {type:'Naked URL',pct:'20%',col:'var(--blue)',rule:'URL alongside company name in testimonial credit block'},
+      {type:'Partial Match',pct:'10%',col:'var(--yellow)',rule:'"[Brand] — [service description]" format some vendors use'}
+    ],
+    anchorRules: 'Testimonial links use company name as natural anchor — perfect branded link building with zero manipulation. Provide full company name exactly as you want it to appear as anchor text.',
+    velocity: [{mo:'Mo1',n:15},{mo:'Mo2',n:10},{mo:'Mo3',n:8},{mo:'Mo4',n:6},{mo:'Mo5',n:5},{mo:'Mo6',n:5},{mo:'Mo7',n:4},{mo:'Mo8',n:4},{mo:'Mo9',n:4},{mo:'Mo10',n:3},{mo:'Mo11',n:3},{mo:'Mo12',n:3}],
+    velocityNote: 'Front-loaded: month 1 covers all existing vendor relationships. Subsequent months add new vendors as you acquire new tools and services.',
+    competitor: ['1. Find which vendors feature competitor as customer — same vendor relationship available to you','2. Check competitor testimonial appearances via Ahrefs','3. Outrank competitor on vendor testimonial pages by providing more specific testimonials'],
+    greyHat: 'WHITE HAT — TESTIMONIAL LINK BUILDING\n• Zero penalty risk — genuinely earned links from authentic testimonials\n• You are providing genuine social proof in exchange for attribution\n• Fastest link building technique by time per link acquired',
+    warnings: ['BEST: Fastest white hat link building — 30 minutes per testimonial = 1 dofollow link','BEST: Zero penalty risk','BEST: Builds genuine business relationships','WARN: Must genuinely use the tool — fake testimonials are dishonest'],
+    siteFilter: s => s.da >= 40 && s.t === 'profile',
+    dailyMix: {profile:60,guest:30,social:10}
+  },
+
+  mass_directory_blitz: {
+    name: '📁 Mass Directory Submission Blitz',
+    tagline: '500+ directory submissions across DA 30-80 platforms for citation and link volume',
+    hat: 'grey', risk: 30,
+    tags: ['Directory Links','Volume','Citations'],
+    kpi: [{label:'Timeline',val:'2–4wks'},{label:'Links',val:'200–500'},{label:'Risk',val:'Low-Medium'},{label:'Cost',val:'Free–$100'},{label:'Best For',val:'Foundational Layer'}],
+    phases: [
+      {label:'Phase 1',title:'Build Master Directory Database',items:['botw.org','jasminedirectory.com','hotfrog.com','manta.com','1abc.org','avivadirectory.com'],note:'Categorise directories: general web directories (DA 40-70), niche-specific (highest relevance), local business directories (geographic signal), industry directories (topical authority). Build database of 500+ with DA, niche relevance, submission requirements, follow status.'},
+      {label:'Phase 2',title:'Standardise Business Information',items:[],note:'All directory submissions must use 100% identical NAP: exact business name, exact address format, exact phone format. Inconsistent NAP dilutes local citation authority. Prepare a submission template with all business info pre-formatted.'},
+      {label:'Phase 3',title:'Submit 20-30 Directories Per Day',items:[],note:'Manual submission: sustainable at 20-30/day. Semi-automated: BrightLocal or Whitespark for business directories. Full automated: ScrapeBox for general web directories. Prioritise manual for DA 50+ directories.'},
+      {label:'Phase 4',title:'Select Optimal Categories Per Directory',items:[],note:'Category selection is an invisible keyword signal. Choose categories that: (a) precisely describe your business, (b) include keyword terms where available. Multiple categories available? Select all relevant ones.'},
+      {label:'Phase 5',title:'Verify and Force Indexation',items:[],note:'After 2 weeks: audit which submissions are live. Submit all live directory listing URLs to social bookmarks (10 per URL) and GSC. Unindexed directory links pass zero equity. Target 60%+ indexation within 30 days.'}
+    ],
+    playbook: ['1. Build master directory list: 500+ sorted by DA, niche, follow status','2. Prepare template: business name, description variants (150/250/500 words), category keywords, NAP','3. Submit top 50 DA 50+ directories manually — custom descriptions per directory','4. Use BrightLocal or Whitespark for business directories','5. Submit niche-specific directories manually — more attention, more authority','6. Submit general web directories in batches of 30/day over 2-3 weeks','7. Track submissions: submitted date, live date, URL when approved','8. After approval: submit listing URL to 10 social bookmarks for indexation','9. Monthly: check for new high-DA directories to add','10. Re-audit annually — some directories go offline'],
+    tiers: [
+      {tier:'DA 60+ Directories',label:'BOTW, JasmineDirectory, niche leaders',desc:'Manual required. Often paid or selective. Highest authority.',col:'var(--green)'},
+      {tier:'DA 30-60 Directories',label:'Mid-tier general and niche',desc:'Core volume tier. Mix free and paid. Semi-automated acceptable.',col:'var(--yellow)'},
+      {tier:'DA 10-30 Directories',label:'Volume tier for Tier 2 use only',desc:'Do not link directly to money site. Use as Tier 2 amplification.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Branded',pct:'55%',col:'var(--green)',rule:'Business name as standard directory listing anchor'},
+      {type:'Partial Match',pct:'25%',col:'var(--yellow)',rule:'Category and description include keyword terms'},
+      {type:'Naked URL',pct:'15%',col:'var(--blue)',rule:'URL displayed alongside business name'},
+      {type:'Exact Match',pct:'5%',col:'var(--red)',rule:'Reserved for 5-10 highest-authority niche directories only'}
+    ],
+    anchorRules: 'Keep business name consistent across all 500 directories. Keyword signals come from category selection and description, not anchor text.',
+    velocity: [{mo:'Wk1',n:80},{mo:'Wk2',n:120},{mo:'Wk3',n:100},{mo:'Wk4',n:80},{mo:'Mo2',n:60},{mo:'Mo3',n:30},{mo:'Mo4',n:15},{mo:'Mo5',n:10},{mo:'Mo6',n:10},{mo:'Mo7',n:5},{mo:'Mo8',n:5},{mo:'Mo9',n:5}],
+    velocityNote: 'Front-load in first 4 weeks. After initial blitz, only add newly discovered qualifying directories.',
+    competitor: ['1. Run competitor through BrightLocal citation finder — find every directory they are listed in','2. Target all directories where competitor appears but you do not','3. Find high-DA directories where no competitor is listed — exclusive citation advantage'],
+    greyHat: 'GREY HAT — MASS DIRECTORY SUBMISSION\n• Grey element: mass automated submission at scale\n• Directory link value has declined — foundational layer only\n• Most valuable: niche-specific directories with topical authority\n• Risk level: LOW',
+    warnings: ['NOTE: General web directory links have minimal individual authority — value is volume and citation','BEST: Niche-specific directories carry strong topical authority worth manual submission','SAFE: Low penalty risk','AVOID: Never use as primary link building strategy — supplementary foundational layer only'],
+    siteFilter: s => s.t==='directory' && s.da >= 30,
+    dailyMix: {directory:80,profile:15,social:5}
+  },
+
+  reciprocal_link_network: {
+    name: '🔄 Reciprocal Link Exchange Network',
+    tagline: 'Systematic 3-way link exchanges to build relationships while obscuring direct reciprocity',
+    hat: 'grey', risk: 45,
+    tags: ['Link Exchange','Relationship','3-Way Links'],
+    kpi: [{label:'Timeline',val:'2–4mo'},{label:'Links/Mo',val:'10–30'},{label:'Risk',val:'Medium'},{label:'Cost',val:'Time'},{label:'Best For',val:'Niche Networks'}],
+    phases: [
+      {label:'Phase 1',title:'Find 50+ Sites for Exchange Network',items:[],note:'Target: adjacent (not competing) niches, DA 30-70, genuine organic traffic, reachable owner. Sources: guest post sites you know, podcast guests, conference connections, LinkedIn network in adjacent industries.'},
+      {label:'Phase 2',title:'Design 3-Way Exchange Architecture',items:[],note:'Direct A→B + B→A = obvious reciprocal (low value). 3-way: Site A links to Site C, Site C links to Site B, Site B links to Site A. None receive a link from the site they linked to. Pattern invisible to standard analysis.'},
+      {label:'Phase 3',title:'Pitch and Agree 3-Way Exchanges',items:[],note:'Pitch: "We run a small link exchange network with complementary sites. Format is 3-way — you link to Site X, a different site links to you. All contextual in-content links." 30-40% agreement rate from warm contacts.'},
+      {label:'Phase 4',title:'Write Contextual Content for Each Exchange',items:[],note:'Each exchange requires creating or updating content that naturally links to the partner site. The link must be contextual and genuinely relevant — not sidebar or footer.'},
+      {label:'Phase 5',title:'Scale Network to 20+ Triangles',items:[],note:'20 exchange triangles = 20 incoming links, all from different domains, contextual placement, topically adjacent sites. Managed well: indistinguishable from organic topical linking.'}
+    ],
+    playbook: ['1. Identify 30-50 exchange partners: adjacent niche, real traffic, responsive owner','2. For each triangle: identify 3 compatible sites with different niche angles','3. Reach out to all 3 simultaneously — reference each other in pitch','4. Agree terms: contextual in-content links only, DA minimum, no sitewide links','5. Create content for your side first — shows good faith','6. Track triangles: Site A/B/C, link live dates, anchor used','7. Audit quarterly: confirm all exchange links remain live','8. Expand: each partner often knows 3-5 more eligible sites','9. Never create direct A↔B reciprocal exchanges — always 3-way minimum','10. Maintain relationships: partners often become guest post collaborators'],
+    tiers: [
+      {tier:'3-Way Triangles',label:'Minimum — partner cannot see reciprocation',desc:'Standard architecture. Pattern invisible in standard analysis.',col:'var(--green)'},
+      {tier:'4-Way Chains',label:'Longer chain — even harder to detect',desc:'A→B→C→D→A. Maximum obfuscation. Requires 4 partners.',col:'var(--yellow)'},
+      {tier:'Avoid Direct Reciprocal',label:'A→B + B→A = obvious manipulation',desc:'Google explicitly devalues direct reciprocal exchanges.',col:'var(--red)'}
+    ],
+    anchorMix: [
+      {type:'Partial Match',pct:'45%',col:'var(--yellow)',rule:'Contextual anchor in content — natural editorial reference format'},
+      {type:'Branded',pct:'35%',col:'var(--green)',rule:'Partner brand name — genuinely how you would reference their site'},
+      {type:'Exact Match',pct:'15%',col:'var(--red)',rule:'Limit to 1-2 exchange links maximum'},
+      {type:'Generic',pct:'5%',col:'var(--muted)',rule:'"this resource" for occasional variety'}
+    ],
+    anchorRules: 'Exchange anchors should feel genuinely editorial. Ask: if NOT in an exchange, how would you naturally link to this site? Use that anchor. Exact match in exchange link dramatically increases detection risk.',
+    velocity: [{mo:'Mo1',n:5},{mo:'Mo2',n:10},{mo:'Mo3',n:15},{mo:'Mo4',n:15},{mo:'Mo5',n:12},{mo:'Mo6',n:12},{mo:'Mo7',n:10},{mo:'Mo8',n:10},{mo:'Mo9',n:8},{mo:'Mo10',n:8},{mo:'Mo11',n:6},{mo:'Mo12',n:6}],
+    velocityNote: 'Month 1 slow — relationship building. Month 3+: network at full velocity as triangles activate. Expands via referrals from existing partners.',
+    competitor: ['1. Identify competitor exchange networks via Ahrefs — clusters of inter-linking adjacent-niche sites','2. Approach competitor exchange partners with better content relevance offer','3. Build network in niches competitors have not entered'],
+    greyHat: 'GREY HAT — RECIPROCAL LINK EXCHANGE\n• Google prohibits "excessive link exchanging"\n• 3-way structure harder to detect than direct reciprocal\n• Scale risk: 50+ triangles creates pattern visible in advanced link graph analysis\n• Low-risk when: contextual, genuine content, moderate volume',
+    warnings: ['WARN: Keep exchange network under 30 triangles — larger creates detectable patterns','BEST: 3-way structure significantly reduces detection vs direct reciprocal','AVOID: Never create direct reciprocal (A→B + B→A) — Google explicitly devalues','BEST: Exchange relationships often convert to genuine content collaboration'],
+    siteFilter: s => s.da >= 40 && s.t === 'guest',
+    dailyMix: {guest:70,profile:20,social:10}
+  },
+
+  web_archive_reclamation: {
+    name: '📦 Web Archive Link Reclamation',
+    tagline: 'Reclaim and redirect dead pages that still have active backlinks pointing at them',
+    hat: 'grey', risk: 20,
+    tags: ['Link Reclamation','301 Redirect','Easy Wins'],
+    kpi: [{label:'Timeline',val:'1–3wks'},{label:'Links Recovered',val:'Variable'},{label:'Risk',val:'Very Low'},{label:'Cost',val:'Tool Access'},{label:'Best For',val:'Established Sites'}],
+    phases: [
+      {label:'Phase 1',title:'Find All Dead Pages With Active Backlinks',items:[],note:'Ahrefs Best by Links report → filter "404 not found": shows all broken pages ranked by referring domains. Each dead page has backlinks pointing to a 404 error — those links currently pass zero authority. Fixing them recovers lost equity.'},
+      {label:'Phase 2',title:'Assess Each Dead Page for Recovery Path',items:[],note:'For each dead page: (a) restore original content if valuable, (b) 301 redirect to closest relevant existing page, (c) create new replacement content if original lost but links valuable. Priority: pages with 5+ referring domains.'},
+      {label:'Phase 3',title:'Find Competitor Dead Pages With Niche Backlinks',items:[],note:'Advanced tactic: find competitor 404 pages that have backlinks from sites in your niche. Those linking sites wanted to link to content on that topic. You create that content and pitch same sites as replacement.'},
+      {label:'Phase 4',title:'Implement Redirects for All Dead Pages',items:[],note:'WordPress: Redirection plugin. Apache: .htaccess rules. Cloudflare: Page Rules. For all dead pages with 2+ referring domains: 301 to the most relevant live page. Test all redirects resolve correctly.'},
+      {label:'Phase 5',title:'Monitor for Newly Dead Pages Monthly',items:[],note:'Set GSC crawl error alerts. Run Ahrefs 404 report monthly — catch new dead pages before backlinks go to waste. Even one day as 404 loses crawl equity — rapid detection and redirection is the goal.'}
+    ],
+    playbook: ['1. Run Ahrefs: Best by Links → 404 filter — export all dead pages with referring domains','2. Sort by referring domains (highest first) — prioritise pages with most link equity','3. Check Wayback Machine to see original content for restoration','4. Implement 301 redirects: dead page → closest relevant live page','5. For dead pages with 10+ referring domains: restore full original content rather than redirecting','6. Find competitor dead pages: Ahrefs on competitor → Best by Links → 404 filter','7. Create replacement content for competitor dead pages with your-niche links','8. Set up GSC crawl error email notifications','9. Run Ahrefs 404 audit monthly','10. Track all recovered links: before/after authority, ranking changes at 60 days'],
+    tiers: [
+      {tier:'10+ Referring Domains',label:'High-priority recovery targets',desc:'Restore content or 301. Maximum link equity recovery.',col:'var(--green)'},
+      {tier:'2-10 Referring Domains',label:'Standard recovery targets',desc:'301 redirect to relevant page. Fast implementation. Strong ROI.',col:'var(--yellow)'},
+      {tier:'1 Referring Domain',label:'Low-priority',desc:'Implement 301 if easy. Skip if URL pattern makes it complex.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Inherited anchors',pct:'100%',col:'var(--green)',rule:'Link reclamation recovers EXISTING links with EXISTING anchor text. You inherit whatever anchors were pointed at dead page — no engineering needed.'}
+    ],
+    anchorRules: 'Link reclamation recovers existing links with existing anchors — purely technical recovery. The equity already exists, you are simply routing it correctly.',
+    velocity: [{mo:'Mo1',n:20},{mo:'Mo2',n:10},{mo:'Mo3',n:5},{mo:'Mo4',n:3},{mo:'Mo5',n:3},{mo:'Mo6',n:3},{mo:'Mo7',n:2},{mo:'Mo8',n:2},{mo:'Mo9',n:2},{mo:'Mo10',n:2},{mo:'Mo11',n:2},{mo:'Mo12',n:2}],
+    velocityNote: 'Month 1: major audit recovers bulk. Months 2+: ongoing monitoring catches newly dead pages. Velocity = links recovered/activated per month.',
+    competitor: ['1. Competitor dead pages with niche backlinks = content creation opportunities','2. Monitor competitor redirects — if they change, old anchor text may dilute — opportunity','3. Check if competitor has fixed their dead pages — if not, their linking sites may accept your alternative'],
+    greyHat: 'GREY HAT — WEB ARCHIVE RECLAMATION\n• Own dead page recovery is fully white hat — standard technical SEO\n• Grey element: competitor dead page exploitation to intercept their links\n• Risk level: very low',
+    warnings: ['BEST: Own dead page recovery is fully white hat','BEST: Highest ROI — recovering existing links costs only implementation time','WARN: 301 must redirect to genuinely relevant page — homepage redirect dilutes topical signal','BEST: Ongoing monitoring prevents continuous link equity leakage'],
+    siteFilter: s => s.da >= 40 && (s.t==='guest' || s.t==='directory'),
+    dailyMix: {guest:60,directory:30,profile:10}
+  },
+
+  competitor_backlink_mirror: {
+    name: '🪞 Competitor Backlink Mirroring',
+    tagline: 'Systematically acquire every link source your top competitors have across their entire profile',
+    hat: 'grey', risk: 30,
+    tags: ['Competitor Intel','Link Gap','Systematic'],
+    kpi: [{label:'Timeline',val:'3–9mo'},{label:'Gap Closed',val:'50–200 links'},{label:'Risk',val:'Low-Medium'},{label:'Cost',val:'Tool + Outreach'},{label:'Best For',val:'Competitive Niches'}],
+    phases: [
+      {label:'Phase 1',title:'Export Full Backlink Profiles of Top 3 Competitors',items:[],note:'Use Ahrefs: export all referring domains for each competitor. Combine into master spreadsheet. Remove: links you already have, spam/PBN sites, irrelevant niches. What remains = your link gap. Sort by DA descending.'},
+      {label:'Phase 2',title:'Categorise Each Gap Link by Acquisition Method',items:[],note:'For each link gap URL: identify how the link was earned. Guest post → pitch same publication. Resource page → pitch your resource. Profile link → create same profile. Each type has a different acquisition approach.'},
+      {label:'Phase 3',title:'Score Each Link Gap by Value and Difficulty',items:[],note:'Score: (DA x 0.4) + (Relevance x 0.4) + (Ease x 0.2) = Priority Score. Guest posts on DA 60 sites = high priority. Profile links on DA 30 = low priority. Focus on highest priority gap links first.'},
+      {label:'Phase 4',title:'Work Through Gap List Methodically',items:[],note:'Process 10-15 gap links per week. Guest posts: pitch same publications. Profiles: create same profile. Resource pages: pitch with your resource. Track: each gap closed = parity move.'},
+      {label:'Phase 5',title:'Find Link Sources No Competitor Has Hit',items:[],note:'Once gap is closed to top competitor: look for DA 50+ sources in your niche that NO competitor has. These are your exclusive advantages — being first to build relationships gives long-term advantage.'}
+    ],
+    playbook: ['1. Export referring domains from Ahrefs for top 3 competitors','2. Combine in spreadsheet — tag each link with which competitor has it','3. Mark "A+B+C" links: sites linking to ALL competitors — must-have, highest priority','4. Mark links you already have — this is your pure gap list','5. Classify each gap link: guest post, profile, resource, editorial, paid','6. Score by value (DA x relevance) and difficulty','7. Build weekly acquisition targets by link type','8. Guest post gaps: research and pitch publication','9. Profile gaps: create profile immediately','10. Resource page gaps: pitch your best content as replacement or addition'],
+    tiers: [
+      {tier:'All-Competitor Links',label:'Links all top 3 competitors have',desc:'Mandatory parity targets. Absence here = maximum competitive disadvantage.',col:'var(--red)'},
+      {tier:'2-of-3 Competitor Links',label:'Links most competitors have',desc:'High priority. Being absent = competitive disadvantage.',col:'var(--yellow)'},
+      {tier:'1-Competitor Exclusive',label:'Links only 1 competitor has',desc:'Evaluate individually — may reveal unique relationships.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Varies by link type',pct:'100%',col:'var(--blue)',rule:'Inherits anchor rules of each acquisition channel. Guest posts: standard rules. Profiles: branded. Resource pages: content title. Apply appropriate rules per channel.'}
+    ],
+    anchorRules: 'Competitor mirroring inherits the anchor strategy of each acquisition channel. The grey element is the systematic intelligence-driven targeting, not the link types themselves.',
+    velocity: [{mo:'Mo1',n:15},{mo:'Mo2',n:20},{mo:'Mo3',n:25},{mo:'Mo4',n:25},{mo:'Mo5',n:20},{mo:'Mo6',n:20},{mo:'Mo7',n:15},{mo:'Mo8',n:15},{mo:'Mo9',n:12},{mo:'Mo10',n:12},{mo:'Mo11',n:10},{mo:'Mo12',n:10}],
+    velocityNote: 'Months 1-2: setup and classification. Month 3+: full acquisition velocity. Link gap typically closes 60-80% within 6 months of systematic effort.',
+    competitor: ['1. This IS competitor intelligence — systematically eliminating their link advantages','2. Track when competitors acquire new links (Ahrefs alerts) — add to gap list in real time','3. When competitor loses links: move faster to acquire same source before they re-acquire'],
+    greyHat: 'GREY HAT — COMPETITOR BACKLINK MIRRORING\n• Risk: low — acquiring links through legitimate channels is white hat\n• Grey element: systematic reverse-engineering of competitor strategy\n• Individual link acquisitions follow their own risk profiles',
+    warnings: ['BEST: Low penalty risk — uses competitor intelligence to guide normal acquisition','BEST: Ensures you never miss a must-have link source','WARN: PBN and paid links in competitor profile cannot be ethically mirrored — skip these','BEST: Closing all-competitor link gap often produces ranking improvements immediately'],
+    siteFilter: s => s.da >= 40 && s.f === 'dofollow',
+    dailyMix: {guest:55,profile:25,directory:20}
+  },
+
+  entity_knowledge_panel: {
+    name: '🧠 Entity SEO & Knowledge Panel Push',
+    tagline: 'Build structured entity signals across platforms to earn a Google Knowledge Panel',
+    hat: 'grey', risk: 20,
+    tags: ['Entity SEO','Knowledge Panel','Brand Authority'],
+    kpi: [{label:'Timeline',val:'3–9mo'},{label:'Outcome',val:'Knowledge Panel'},{label:'Risk',val:'Very Low'},{label:'Cost',val:'Time'},{label:'Best For',val:'Brand Building'}],
+    phases: [
+      {label:'Phase 1',title:'Claim and Verify All Official Entity Properties',items:['google.com/business','wikidata.org','linkedin.com/company','twitter.com','crunchbase.com'],note:'Knowledge Panel built from: Google My Business (primary trigger), Wikipedia (strongest entity signal), Wikidata (structured data layer), social profiles (confirmation signals). Start with GMB + Wikidata — minimum for Knowledge Panel creation.'},
+      {label:'Phase 2',title:'Create Your Wikidata Entity Page',items:[],note:'Wikidata is the structured data layer Google uses to populate Knowledge Panels. Create entity: goto wikidata.org → Create new item → Add: instance of (business), name, industry, founding date, website (P856), LinkedIn (P6366), Twitter (P2002).'},
+      {label:'Phase 3',title:'Ensure Perfect NAP Across 50+ Platforms',items:[],note:'Google cross-references entity information across platforms. Inconsistent name, address, phone, or description creates entity confusion — delays Knowledge Panel. Audit all profiles for 100% NAP consistency.'},
+      {label:'Phase 4',title:'Earn Wikipedia Article and Press Mentions',items:[],note:'Wikipedia is the strongest Knowledge Panel trigger. Requirements: significant coverage in 3+ independent reliable sources. Invest in press coverage (HARO, PR blitz) to build Wikipedia notability. Once press citations exist: create Wikipedia article.'},
+      {label:'Phase 5',title:'Add Organization Schema to All Pages',items:[],note:'JSON-LD Organization schema on homepage: name, description, URL, logo, sameAs array (all official social profiles), address, phone. The sameAs array tells Google which profiles belong to the same entity.'}
+    ],
+    playbook: ['1. Claim Google My Business — fully complete, verified, 10+ photos, regular posts','2. Create Wikidata entity — add all properties including sameAs links','3. Audit all existing profiles — achieve 100% NAP consistency','4. Add Organization JSON-LD schema with complete sameAs array','5. Get press coverage: HARO + press releases = multiple independent source citations','6. Create or edit Wikipedia article (requires editor account)','7. Build Crunchbase, Bloomberg, LinkedIn Company to 100% completeness','8. Search brand name → if Knowledge Panel appears → click "Claim this Knowledge Panel"','9. Submit factual corrections after claiming','10. Monitor monthly — add new information as entity grows'],
+    tiers: [
+      {tier:'Wikipedia + GMB',label:'Minimum Knowledge Panel trigger',desc:'Wikipedia is single strongest entity signal. GMB mandatory for local entities.',col:'var(--green)'},
+      {tier:'Wikidata + Schema',label:'Structured entity data layer',desc:'Powers information inside the Knowledge Panel once triggered.',col:'var(--yellow)'},
+      {tier:'Social + Press + Directories',label:'Entity confirmation signals',desc:'Cross-referencing signals that confirm entity consistency to Google.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Brand Entity Signals',pct:'100%',col:'var(--green)',rule:'Entity SEO is about structured data consistency, not anchor text. All properties use exact business name. Schema sameAs array links to exact profile URLs.'}
+    ],
+    anchorRules: 'Entity SEO operates on entity signal consistency, not anchor text. Augments your link building by amplifying the authority of every other link through entity recognition.',
+    velocity: [{mo:'Mo1',n:0},{mo:'Mo2',n:0},{mo:'Mo3',n:0},{mo:'Mo4',n:0},{mo:'Mo5',n:0},{mo:'Mo6',n:1},{mo:'Mo7',n:0},{mo:'Mo8',n:0},{mo:'Mo9',n:0},{mo:'Mo10',n:0},{mo:'Mo11',n:0},{mo:'Mo12',n:0}],
+    velocityNote: 'Not a traditional link velocity strategy. Month 6 = Knowledge Panel appearing. Entity recognition then amplifies ALL other link building efforts.',
+    competitor: ['1. Search competitor brand — if they have Knowledge Panel and you do not, entity work is urgent','2. Examine competitor Knowledge Panel for data sources Google pulls from — replicate those sources','3. If competitor has Wikipedia you do not: that is the primary Knowledge Panel gap'],
+    greyHat: 'GREY HAT — ENTITY SEO\n• Risk: very low\n• Grey element: Wikipedia article creation with minimum notability requires manufactured press coverage\n• GMB, schema, Wikidata are fully white hat\n• Knowledge Panel creation amplifies all other SEO work',
+    warnings: ['BEST: Knowledge Panel provides permanent brand authority signal amplifying all rankings','BEST: Schema markup and GMB completion are zero-risk practices any site should implement','WARN: Wikipedia requires genuine notability — press coverage investment needed for unknown brands','BEST: Entity recognition changes how Google evaluates your entire domain'],
+    siteFilter: s => s.da >= 60 && (s.t==='profile' || s.t==='directory'),
+    dailyMix: {profile:60,directory:30,social:10}
+  },
+
+  link_reclamation_campaign: {
+    name: '♻️ Link Reclamation Campaign',
+    tagline: 'Find and restore broken, redirected, and lost backlinks pointing to your domain',
+    hat: 'grey', risk: 10,
+    tags: ['Link Recovery','Easy Wins','Technical'],
+    kpi: [{label:'Timeline',val:'1–3wks'},{label:'Links Recovered',val:'10–100+'},{label:'Risk',val:'Very Low'},{label:'Cost',val:'Tool Access'},{label:'Best For',val:'Established Sites'}],
+    phases: [
+      {label:'Phase 1',title:'Identify All Lost Links in Last 12 Months',items:[],note:'Ahrefs → Lost Links report → filter last 12 months. Shows every link your site used to have that no longer exists. Reasons: page deleted, URL changed on linking site, redesign, nofollow added. Each is a potential recovery target.'},
+      {label:'Phase 2',title:'Diagnose Why Each Link Was Lost',items:[],note:'Check each lost link: (a) is linking page still live? (b) did they change your URL? (c) was content updated and link removed? (d) did linking site go offline? Recoverable: URL change, content update, wrong URL. Not recoverable: site offline.'},
+      {label:'Phase 3',title:'Find Links to Old Redirected URLs',items:[],note:'When you change URLs and implement 301s, links still point to old URLs. While 301s pass authority, the link points to non-canonical URL. Request linkers update href to new canonical URL — recovers full link equity.'},
+      {label:'Phase 4',title:'Email Linking Sites to Restore Links',items:[],note:'Recovery email: "I noticed the link to our [content] on your [page] is no longer active. Would you be able to restore the link? The current URL is [new URL]." Recovery rate: 25-40%. Short, specific, helpful.'},
+      {label:'Phase 5',title:'Set Up Ongoing Lost Link Alerts',items:[],note:'Ahrefs alerts: weekly notification for new lost links. Attempt recovery within 7 days. Site owners forget why they had the link after 30+ days — speed matters.'}
+    ],
+    playbook: ['1. Run Ahrefs lost links report: last 12 months, filter DA 20+','2. Export spreadsheet: linking page URL, your page URL, linking DA, date lost','3. Check each linking page: still live? Still references your topic?','4. Diagnose loss reason: removed deliberately vs migration vs accidental','5. For URL changes: compose outreach requesting updated URL in their href','6. For content removal: check if content is still relevant — if yes, request restoration','7. Send recovery outreach: personalised, short, helpful, include correct URL','8. Follow up once after 7 days','9. Sites offline: nothing to recover — note in spreadsheet','10. Set Ahrefs alert: new lost links — respond within 7 days for best recovery rate'],
+    tiers: [
+      {tier:'DA 60+ Lost Links',label:'Individual personalised outreach',desc:'Worth 30-45 minutes per link attempt.',col:'var(--green)'},
+      {tier:'DA 30-60 Lost Links',label:'Template outreach',desc:'Core volume recovery. 15 minutes per link.',col:'var(--yellow)'},
+      {tier:'DA 10-30 Lost Links',label:'Batch recovery',desc:'20 per outreach session. Still worth recovering.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Inherited anchors',pct:'100%',col:'var(--green)',rule:'Link reclamation recovers existing links with existing anchors — no engineering. Anchor text was established when link existed.'}
+    ],
+    anchorRules: 'Purely technical recovery strategy — anchor text is pre-determined. Focus entirely on recovery rate. Any recovered link improves profile exactly as it was before loss.',
+    velocity: [{mo:'Mo1',n:30},{mo:'Mo2',n:15},{mo:'Mo3',n:8},{mo:'Mo4',n:5},{mo:'Mo5',n:5},{mo:'Mo6',n:4},{mo:'Mo7',n:4},{mo:'Mo8',n:3},{mo:'Mo9',n:3},{mo:'Mo10',n:3},{mo:'Mo11',n:3},{mo:'Mo12',n:3}],
+    velocityNote: 'Month 1: initial audit recovers bulk. Month 2+: ongoing monitoring catches newly lost links. Velocity declines as historical backlog is cleared.',
+    competitor: ['1. Competitor link reclamation failures = your guest post opportunity','2. When competitor site goes offline: all their backlinks become dead — pitch those linking sites immediately','3. Monitor competitor lost links in Ahrefs — reveals which sites recently linked in your niche'],
+    greyHat: 'GREY HAT — LINK RECLAMATION\n• Own link reclamation is fully white hat\n• Grey element: competitor exploitation to intercept lost link opportunities\n• Risk level: very low',
+    warnings: ['BEST: Fastest ROI in link building — recovering existing links costs only outreach time','BEST: Near-zero penalty risk','WARN: Only attempt recovery for links genuinely relevant to current site content','BEST: Ongoing monitoring creates continuous passive link recovery stream'],
+    siteFilter: s => s.da >= 30 && (s.t==='guest' || s.t==='directory'),
+    dailyMix: {guest:60,directory:25,profile:15}
+  },
+
+  rss_feed_syndication: {
+    name: '📡 RSS Feed Link Syndication',
+    tagline: 'Syndicate content via RSS to auto-generate distributed links across aggregator platforms',
+    hat: 'grey', risk: 35,
+    tags: ['Content Syndication','RSS','Automated Links'],
+    kpi: [{label:'Timeline',val:'2–6wks'},{label:'Links',val:'50–500/mo'},{label:'Risk',val:'Low-Medium'},{label:'Cost',val:'Time + Tools'},{label:'Best For',val:'Content Sites'}],
+    phases: [
+      {label:'Phase 1',title:'Optimise RSS Feed for Maximum Syndication',items:[],note:'RSS feed must include: full article content (not excerpt), all media, canonical tag pointing to original URL, author bio with website link. Tools: Feedburner (legacy), RSS.com, native WordPress RSS. Full content in feed = more syndication surfaces.'},
+      {label:'Phase 2',title:'Submit Feed to 50+ RSS Aggregators',items:['feedly.com','inoreader.com','alltop.com','bloglines.com','paperli.com','flipboard.com','netvibes.com'],note:'Priority aggregators: Feedly (DA 91), Flipboard (DA 90), AllTop (DA 70). Each aggregator that picks up your feed = auto-syndicated link for every article published. 50 aggregators x 10 articles/month = 500 auto-generated links.'},
+      {label:'Phase 3',title:'Submit to Niche-Specific Aggregators',items:[],note:'Search: "[niche] RSS aggregator", "[niche] news aggregator", "[niche] content hub". Niche aggregators carry topical authority signals. Industry-specific aggregators often have higher DA than general ones and better topical relevance.'},
+      {label:'Phase 4',title:'Ping RSS Directories on Every Publish',items:['pingler.com','feedping.com','pingmylinks.com','pingomatic.com'],note:'After every publish: ping 20+ RSS directories automatically. WordPress: Jetpack Publicize or built-in ping list. Pinging ensures aggregators pick up content within hours rather than days.'},
+      {label:'Phase 5',title:'Promote Your RSS Feed Actively',items:[],note:'Include RSS subscribe button prominently. Add feed URL to all profiles, directories, and author bios. The more subscribers your feed has, the more aggregators and IFTTT applets republish content — creating more auto-generated links.'}
+    ],
+    playbook: ['1. Enable full-content RSS feed — check yourdomain.com/feed to confirm full content showing','2. Submit feed to 50+ general RSS aggregators — track accepted vs pending','3. Submit to 10-20 niche-specific aggregators in your vertical','4. Set up Pingomatic or Pingler auto-ping on every post publish','5. Create IFTTT recipe: new RSS item → post to 10 social profiles','6. Submit feed URL to social bookmarking sites','7. Track which aggregators index content and send traffic','8. Monitor: anchor text on aggregator links — should be article titles','9. Publish consistently — RSS syndication rewards publishing frequency','10. After 3 months: audit link sources, identify top-performing aggregators'],
+    tiers: [
+      {tier:'DA 80+ Aggregators',label:'Feedly, Flipboard, AllTop',desc:'Highest authority auto-links. Priority submission targets.',col:'var(--green)'},
+      {tier:'DA 40-80 Aggregators',label:'Niche news hubs, industry feeds',desc:'Strong topical authority. Submit manually with custom description.',col:'var(--yellow)'},
+      {tier:'DA 10-40 Aggregators',label:'Micro-niche aggregators',desc:'Volume. Good for topical diversity of link sources.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Article Title',pct:'65%',col:'var(--green)',rule:'RSS aggregators link to article by title — partial match anchor naturally'},
+      {type:'Branded',pct:'25%',col:'var(--blue)',rule:'"From [Brand]" attribution on aggregator listing'},
+      {type:'Naked URL',pct:'10%',col:'var(--yellow)',rule:'Some aggregators display full URL alongside title'}
+    ],
+    anchorRules: 'Optimise article titles to include target keywords — every RSS syndication link uses article title as anchor. Title = anchor text on 500+ auto-generated links.',
+    velocity: [{mo:'Mo1',n:50},{mo:'Mo2',n:100},{mo:'Mo3',n:150},{mo:'Mo4',n:150},{mo:'Mo5',n:120},{mo:'Mo6',n:120},{mo:'Mo7',n:100},{mo:'Mo8',n:100},{mo:'Mo9',n:80},{mo:'Mo10',n:80},{mo:'Mo11',n:80},{mo:'Mo12',n:80}],
+    velocityNote: 'Velocity scales with publishing frequency and aggregator count. 10 articles/month x 50 aggregators = 500 auto-generated links. Each new aggregator added increases velocity permanently.',
+    competitor: ['1. Find competitor RSS feeds — identify which aggregators syndicate them','2. Submit your feed to all same aggregators — parallel coverage','3. Publish more frequently than competitor — RSS rewards volume'],
+    greyHat: 'GREY HAT — RSS FEED SYNDICATION\n• Grey element: auto-generated links at scale without manual curation\n• Low penalty risk: links are from your own syndicated content with proper canonical tags\n• Risk: duplicate content if canonical tags missing — always include canonical\n• Scale risk: 500+ identical auto-links from same pattern can trigger velocity flags',
+    warnings: ['WARN: Always include canonical tag pointing to original — prevents duplicate content penalty','BEST: Highly scalable — set up once, generates links indefinitely with each publish','WARN: Keep publishing velocity natural — sudden 20/day publish spike looks manipulative','NOTE: RSS syndication links are nofollow on many aggregators — value is brand signal + traffic, not all equity'],
+    siteFilter: s => s.t==='social' || s.t==='web20' || s.t==='document',
+    dailyMix: {social:50,web20:30,document:20}
+  },
+
+  influencer_co_citation: {
+    name: '🤝 Influencer Co-Citation Network',
+    tagline: 'Pay micro-influencers to mention your brand alongside authority sites for co-citation signals',
+    hat: 'grey', risk: 40,
+    tags: ['Co-Citation','Brand Mentions','Influencer'],
+    kpi: [{label:'Timeline',val:'1–3mo'},{label:'Mentions',val:'50–200/mo'},{label:'Risk',val:'Medium'},{label:'Cost',val:'$500–$5000/mo'},{label:'Best For',val:'Authority Building'}],
+    phases: [
+      {label:'Phase 1',title:'Understand Co-Citation as a Ranking Signal',items:[],note:'Co-citation: Google identifies sites mentioned alongside each other as topically associated. If your brand is consistently mentioned alongside Wikipedia, Forbes, and Harvard Business Review — Google associates your brand with their authority. No link required. Mentions alone create association.'},
+      {label:'Phase 2',title:'Build Target Influencer List',items:[],note:'Target: micro-influencers (5,000-100,000 followers) in your niche, active content creators, LinkedIn thought leaders, niche newsletter authors, podcast hosts, YouTube creators. Micro > macro: higher engagement, lower cost, more authentic mentions.'},
+      {label:'Phase 3',title:'Design Natural Co-Citation Content',items:[],note:'The mention must be natural. Bad: "Check out BrandX (sponsored)." Good: "The best resources I use are Forbes for market data, Harvard Business Review for strategy, and BrandX for [specific tool/insight]." Resources lists, tool recommendations, and reading lists are ideal formats.'},
+      {label:'Phase 4',title:'Brief Influencers Carefully',items:[],note:'Brief: mention your brand alongside 3-5 authority sites in the same sentence or paragraph, no "sponsored" label if organic mention policy allows, include URL, natural recommendation context. Payment: $100-$500 per quality micro-influencer post.'},
+      {label:'Phase 5',title:'Distribute Across Multiple Platforms',items:[],note:'Platforms for co-citation: LinkedIn posts, Twitter/X threads, email newsletters, YouTube descriptions, podcast show notes, Medium articles. Each platform creates a separate co-citation signal. Same influencer across multiple platforms multiplies the signal.'}
+    ],
+    playbook: ['1. Identify 10-15 authority sites you want to be associated with','2. Build list of 50+ micro-influencers: LinkedIn, Twitter, YouTube, podcasts in your niche','3. Create brief: resources list format, mention alongside 3-4 specific authority sites','4. Contact influencers: DM, email via contact page, influencer platform (AspireIQ, Grin)','5. Negotiate: $100-$300 per mention for micro-influencer is typical','6. Review content before publication: ensure co-citation is natural and prominent','7. Track: which platforms produce most signal? (Check brand association in SERPs)','8. Scale: 20 influencers/month = strong co-citation signal within 90 days','9. Test: search "[your brand] vs [authority brand]" in Google — co-citation shows in association','10. Maintain: ongoing 10-15 mentions/month sustains co-citation signal indefinitely'],
+    tiers: [
+      {tier:'LinkedIn Thought Leaders',label:'5K-100K professional followers',desc:'Strongest professional co-citation. Google crawls LinkedIn extensively.',col:'var(--green)'},
+      {tier:'Newsletter Authors',label:'Email subscribers 1K-50K',desc:'High-trust environment. Newsletter co-citations read as strong recommendations.',col:'var(--yellow)'},
+      {tier:'Podcast / YouTube',label:'Show notes and descriptions',desc:'Long-form co-citation context. Strong topical association signal.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Brand Mention (no link)',pct:'60%',col:'var(--green)',rule:'Co-citation works without links — brand mention alongside authority sites is the signal'},
+      {type:'Branded Link',pct:'30%',col:'var(--blue)',rule:'When influencer includes link — branded anchor always'},
+      {type:'Naked URL',pct:'10%',col:'var(--yellow)',rule:'Some platforms prefer URL format — still creates co-citation signal'}
+    ],
+    anchorRules: 'Co-citation does not require links. The signal is proximity of your brand mention to authority brand mentions. Focus on mention quality and authority site association, not link anchor text.',
+    velocity: [{mo:'Mo1',n:20},{mo:'Mo2',n:40},{mo:'Mo3',n:60},{mo:'Mo4',n:60},{mo:'Mo5',n:50},{mo:'Mo6',n:50},{mo:'Mo7',n:40},{mo:'Mo8',n:40},{mo:'Mo9',n:30},{mo:'Mo10',n:30},{mo:'Mo11',n:30},{mo:'Mo12',n:30}],
+    velocityNote: 'Co-citation signals compound: 50+ mentions in month 3 creates measurable brand association in SERPs. Scale to 200+ mentions/month for strong topical authority signals.',
+    competitor: ['1. Identify which authority sites competitors are co-cited with — target same associations','2. Find influencers who mention competitors — offer higher rates for your brand','3. Create better resources/tools so influencer organically wants to recommend you'],
+    greyHat: 'GREY HAT — INFLUENCER CO-CITATION\n• Grey element: paid brand mentions create artificial association signal\n• FTC requires disclosure if paying for mentions in most jurisdictions\n• Low penalty risk: Google cannot directly penalise mentions, only links\n• Risk: FTC compliance — ensure influencers include disclosure',
+    warnings: ['WARN: FTC compliance — paid mentions require disclosure in most markets','BEST: Co-citation links are immune to manual link penalties — mentions not links','BEST: Brand association with authority sites affects entire domain authority perception','WARN: Inauthentic mentions on low-quality influencer accounts waste budget'],
+    siteFilter: s => s.t==='social' || s.t==='web20',
+    dailyMix: {social:70,web20:20,profile:10}
+  },
+
+  subdomain_authority_sculpting: {
+    name: '🏗️ Subdomain Authority Sculpting',
+    tagline: 'Deploy strategic content on subdomains to sculpt internal authority flow to target pages',
+    hat: 'grey', risk: 35,
+    tags: ['Authority Sculpting','Internal Links','Subdomain Strategy'],
+    kpi: [{label:'Timeline',val:'2–4mo'},{label:'Authority Gain',val:'Internal redistribution'},{label:'Risk',val:'Low-Medium'},{label:'Cost',val:'Dev + Content'},{label:'Best For',val:'Enterprise / Authority Sites'}],
+    phases: [
+      {label:'Phase 1',title:'Audit Current Internal Authority Distribution',items:[],note:'Use Ahrefs Site Audit or Screaming Frog: find pages with most inbound internal links (internal PageRank). Map which pages are receiving authority vs which target pages you want to rank. The gap = your sculpting opportunity.'},
+      {label:'Phase 2',title:'Design Subdomain Architecture for Authority Flow',items:[],note:'Subdomains receive authority from the root domain and can redistribute internally. Common structure: blog.domain.com (high content, attracts external links), resources.domain.com (link magnet), tools.domain.com (passive link acquisition). Each subdomain links back to money pages.'},
+      {label:'Phase 3',title:'Build High-Link-Magnet Content on Subdomains',items:[],note:'Deploy: comprehensive resource hubs, free tools, data studies, industry glossaries on subdomain. These attract external backlinks to the subdomain URL. All subdomain pages include contextual links to root domain target pages.'},
+      {label:'Phase 4',title:'Launch Link Building Campaign to Subdomain',items:[],note:'Build links TO the subdomain with the content strategy designed for it. This funnels external authority through subdomain → internal links → root domain target pages. Two-layer authority sculpting.'},
+      {label:'Phase 5',title:'Optimise Internal Link Anchor Text',items:[],note:'Every subdomain-to-rootdomain internal link uses partial match anchor text for target page keyword. Internal anchor text is fully controllable — the cleanest keyword signal available. 20 internal links with target anchor = significant topical boost.'}
+    ],
+    playbook: ['1. Audit: which of your root domain pages have the most external backlinks but rank below their potential?','2. Map internal link flow: how much authority reaches your target pages?','3. Create blog.yourdomain.com or resources.yourdomain.com if not existing','4. Deploy 5-10 comprehensive resource pages on subdomain targeting link magnets','5. Build external backlinks to subdomain resource pages (guest post, HARO, tools)','6. Add contextual internal links from subdomain to root domain target pages','7. Use target keyword as anchor text for all subdomain-to-root internal links','8. Monitor: GSC shows internal link count and crawl depth for target pages','9. After 60 days: check ranking change on target pages','10. Expand: more subdomains or more resource pages on existing subdomain'],
+    tiers: [
+      {tier:'blog.domain.com',label:'Content subdomain — highest link magnet',desc:'Attracts most natural external backlinks. Core authority funnel.',col:'var(--green)'},
+      {tier:'resources.domain.com',label:'Resource hub — strong link magnet',desc:'Comprehensive guides and tools. Link building target.',col:'var(--yellow)'},
+      {tier:'tools.domain.com',label:'Free tools — passive link acquisition',desc:'Free tools attract embeds and directory links automatically.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Partial Match',pct:'60%',col:'var(--yellow)',rule:'Internal links — use target keyword anchor for full internal signal benefit'},
+      {type:'Exact Match',pct:'25%',col:'var(--green)',rule:'Internal exact match is safe — no manipulation risk for own-site links'},
+      {type:'Branded',pct:'15%',col:'var(--blue)',rule:'Brand name for navigation and contextual references to company'}
+    ],
+    anchorRules: 'Internal links have zero anchor manipulation risk — use exact match and partial match aggressively for maximum keyword signal. This is the only link context where exact match anchor is risk-free.',
+    velocity: [{mo:'Mo1',n:0},{mo:'Mo2',n:5},{mo:'Mo3',n:15},{mo:'Mo4',n:20},{mo:'Mo5',n:20},{mo:'Mo6',n:15},{mo:'Mo7',n:10},{mo:'Mo8',n:10},{mo:'Mo9',n:8},{mo:'Mo10',n:8},{mo:'Mo11',n:8},{mo:'Mo12',n:8}],
+    velocityNote: 'Months 1-2: setup and initial content deployment. Month 3+: external link building to subdomain begins routing authority. Month 4: measurable authority redistribution to target pages.',
+    competitor: ['1. Check if competitors use subdomains — examine their link profile for subdomain patterns','2. Find competitor high-authority subdomain pages — understand what content attracts their links','3. Build subdomain content that outcompetes competitor resource pages on same topics'],
+    greyHat: 'GREY HAT — SUBDOMAIN AUTHORITY SCULPTING\n• Grey element: deliberate manipulation of PageRank flow within own domain\n• Risk: if Google treats subdomain as separate site, authority transfer diluted\n• Subdomain vs subdirectory debate: /blog/ passes more authority than blog.domain.com\n• Low penalty risk — own-site architecture manipulation',
+    warnings: ['BEST: Internal link anchor text is the safest keyword signal — zero penalty risk','WARN: Google may treat subdomains as separate entities — /subdirectory/ safer for authority transfer','BEST: Resource subdomain becomes independent link magnet attracting external links','WARN: Over-engineered internal linking with obvious PageRank sculpting can appear manipulative'],
+    siteFilter: s => s.da >= 40 && (s.t==='guest' || s.t==='directory'),
+    dailyMix: {guest:65,directory:25,profile:10}
+  },
+
+  gsa_tier2_blast: {
+    name: '⚡ GSA Tier 2 Blast (Managed)',
+    tagline: 'Automated Tier 2 blast with managed footprint reduction to amplify Tier 1 links',
+    hat: 'black', risk: 70,
+    tags: ['Automated','Tier 2','GSA SER'],
+    kpi: [{label:'Timeline',val:'Days'},{label:'Links',val:'10k–500k Tier 2'},{label:'Risk',val:'High (Tier 2 only)'},{label:'Cost',val:'$150–$500/mo tool'},{label:'Best For',val:'Tier 2 Amplification'}],
+    phases: [
+      {label:'Phase 1',title:'Set Up GSA SER With Managed Footprint',items:[],note:'GSA SER configuration: rotate 50+ verified email accounts, proxy rotation (private proxies only — shared proxies create shared footprint), custom spin syntax for content to prevent duplicate content signatures, varied anchor text distribution per campaign.'},
+      {label:'Phase 2',title:'Build Tier 1 Manually Before Blasting',items:[],note:'CRITICAL: Tier 2 blast amplifies Tier 1 — Tier 1 must be built manually first. Tier 1 = Web 2.0s, guest posts, profiles. Tier 2 = automated links pointing at Tier 1 URLs, not money site. Never blast money site URL directly with GSA.'},
+      {label:'Phase 3',title:'Configure Blast Parameters',items:[],note:'Target URLs: Tier 1 URLs only. Anchor distribution: 50% random/generic, 30% naked URL, 15% branded, 5% partial match. Site lists: tier 2 site lists from GSA community (200,000+ sites). Content: spun articles, 3-5 spin layers minimum.'},
+      {label:'Phase 4',title:'Run Blast in Managed Batches',items:[],note:'Blast 500-2000 links/day over 2 weeks per Tier 1 URL. Monitor: Tier 1 URL indexation remains stable. If Tier 1 deindexed = over-blasted. Optimal: 500 Tier 2 links per Tier 1 URL over 14 days. Never blast a single URL with 50,000 links — destroys Tier 1.'},
+      {label:'Phase 5',title:'Index Tier 2 Links',items:[],note:'GSA-generated links index poorly without assistance. Use: GSA Search Engine Ranker → Index Now, indexing services (OneHourIndexing), social bookmarks on Tier 2 URLs. Target 20-30% indexation rate — 1000 links x 25% = 250 indexed Tier 2 links amplifying each Tier 1.'}
+    ],
+    playbook: ['1. Build 20-50 quality Tier 1 properties first — manually created Web 2.0s, profiles','2. Install GSA SER with private proxy package (minimum 30 private proxies)','3. Set up 50+ email accounts on different domains for verification','4. Build project: Tier 1 URLs as targets, mixed anchor distribution, spun content','5. Import tier 2 site lists from GSA community (gsa-ser.com, blackhatworld.com)','6. Run blast: 500-1000 verified links per Tier 1 URL per week','7. Monitor: check Tier 1 URLs still indexed via site: operator weekly','8. Run indexer on created links: GSA Index or third-party indexing service','9. Check money site after 30 days — ranking movement indicates Tier 1 quality','10. Rebuild Tier 1s if deindexed — they are the amplification layer, not the direct links'],
+    tiers: [
+      {tier:'500-2,000 links/URL',label:'Conservative Tier 2 blast',desc:'Safest GSA approach. Tier 1 URLs unlikely to be deindexed.',col:'var(--green)'},
+      {tier:'2,000-10,000 links/URL',label:'Aggressive Tier 2 blast',desc:'High power. Monitor Tier 1 indexation carefully.',col:'var(--yellow)'},
+      {tier:'10,000+ links/URL',label:'Nuclear blast — risk of Tier 1 deindex',desc:'Overkill. Diminishing returns. Tier 1 may be burned.',col:'var(--red)'}
+    ],
+    anchorMix: [
+      {type:'Random/Generic',pct:'50%',col:'var(--muted)',rule:'"click here", "read more", "source" — Tier 2 anchor diversity'},
+      {type:'Naked URL',pct:'30%',col:'var(--blue)',rule:'Tier 1 URL as anchor — standard Tier 2 format'},
+      {type:'Branded',pct:'15%',col:'var(--green)',rule:'Brand name — occasional Tier 2 branded signal'},
+      {type:'Partial Match',pct:'5%',col:'var(--yellow)',rule:'Minimal — Tier 2 partial match dilutes if overdone'}
+    ],
+    anchorRules: 'CRITICAL: Tier 2 anchor distribution must be overwhelmingly generic/naked URL. Keyword-rich anchors at Tier 2 = over-optimisation signal leaking through to money site. Keep exact match at 0%.',
+    velocity: [{mo:'Wk1',n:2000},{mo:'Wk2',n:5000},{mo:'Wk3',n:8000},{mo:'Wk4',n:10000},{mo:'Mo2',n:20000},{mo:'Mo3',n:15000},{mo:'Mo4',n:10000},{mo:'Mo5',n:5000},{mo:'Mo6',n:5000},{mo:'Mo7',n:3000},{mo:'Mo8',n:3000},{mo:'Mo9',n:2000}],
+    velocityNote: 'Tier 2 velocity shown. Money site NEVER receives these links directly. These amplify Tier 1 properties.',
+    competitor: ['1. GSA Tier 2 is detectable by SEOs via footprint — do not use same default templates','2. Competitors likely using same Tier 2 blast approach — beat them with better Tier 1 quality','3. Custom footprint reduction makes your Tier 2 harder to replicate or detect'],
+    greyHat: 'BLACK HAT — GSA TIER 2 BLAST\n• Direct violation of Google guidelines — automated link building at scale\n• Money site protection: 2 layers between GSA links and money site reduces risk\n• Risk to money site: LOW if Tier 1 is high quality and money site never targets directly\n• Risk to Tier 1: MEDIUM — blasting can deindex Tier 1 Web 2.0 properties\n• Overall risk: HIGH if misconfigured. MEDIUM if properly managed.',
+    warnings: ['AVOID: Never target money site URL directly with GSA — always Tier 2 only','WARN: Over-blasting a single Tier 1 URL will deindex it — 500-2000 links/URL maximum','WARN: Default GSA footprint detectable — use custom user agents, varied content, fresh proxy rotation','BEST: When properly managed, Tier 2 blast can move competitive keywords in 30-60 days'],
+    siteFilter: s => s.t==='web20' || s.t==='profile' || s.t==='social',
+    dailyMix: {web20:45,profile:35,social:20}
+  },
+
+  competitor_negative_seo: {
+    name: '☠️ Competitor Negative SEO',
+    tagline: 'Deliberate spam link campaign targeting competitor domains to trigger Google penalties',
+    hat: 'black', risk: 95,
+    tags: ['Negative SEO','Competitor Attack','Black Hat'],
+    kpi: [{label:'Timeline',val:'2–8wks'},{label:'Effect',val:'Ranking drop/penalty'},{label:'Risk',val:'Very High'},{label:'Cost',val:'$200–$2000'},{label:'Best For',val:'AVOID — High Risk'}],
+    phases: [
+      {label:'Phase 1',title:'Assess Competitor Vulnerability',items:[],note:'Most large sites have disavow files covering common spam patterns — negative SEO on well-established sites rarely works. Best targets: DA 30-60 sites with clean (low spam) backlink profiles, no existing disavow file, in competitive niches where Google manual reviewers are active.'},
+      {label:'Phase 2',title:'Select Spam Link Types for Maximum Damage',items:[],note:'Most effective negative SEO patterns: exact match anchor over-optimisation (1000+ links all using same exact match keyword), link farm network blast (links from sites already penalised), foreign language spam (Cyrillic or Chinese spam pointing to English site), adult/gambling links on family-safe niche sites.'},
+      {label:'Phase 3',title:'Build or Purchase the Spam Link Campaign',items:[],note:'Tools: XRumer for automated spam, Fiverr negative SEO gigs ($5-$50 for 10,000 spammy links), GSA SER with maximum footprint settings, hacked site link injection (illegal in most jurisdictions). Never use any account, email, or IP traceable to you.'},
+      {label:'Phase 4',title:'Time the Attack for Maximum Disruption',items:[],note:'Best timing: after competitor publishes major content campaign, before major seasonal traffic period, during a Google algorithm update cycle. Algorithm updates increase susceptibility to spam signals temporarily.'},
+      {label:'Phase 5',title:'Monitor Effects and Know When to Stop',items:[],note:'Monitor competitor rankings via SEMrush or SimilarWeb. If effective: rankings drop within 2-4 weeks, manual action visible in their GSC (you cannot see this), organic traffic decrease visible in SimilarWeb. If no effect after 6 weeks: target likely has disavow coverage.'}
+    ],
+    playbook: ['1. Verify competitor has no existing disavow file (check if any forum posts mention their disavow activity)','2. Identify their primary money keyword and primary ranking page','3. Prepare spam campaign: 10,000+ exact match keyword anchor links from spam networks','4. Use only untraceable accounts, anonymous proxies, never personal IPs','5. Build links in waves — not all at once (single wave is detectable)','6. Monitor competitor rankings weekly after campaign starts','7. If competitor recovers quickly: disavow file active — abandon campaign','8. Never discuss campaign publicly, never on traceable accounts','9. Consider: most effective when combined with competing content push','10. Accept: this is illegal in many jurisdictions — understand the legal risk'],
+    tiers: [
+      {tier:'Exact Match Anchor Bombing',label:'Most effective pattern',desc:'10,000+ links, all same exact match keyword. Triggers unnatural link pattern.',col:'var(--red)'},
+      {tier:'Foreign Spam Network',label:'Medium effectiveness',desc:'Links from penalised foreign domains. Pattern: sudden foreign language links.',col:'var(--yellow)'},
+      {tier:'Adult/Gambling Links',label:'Contextual mismatch attack',desc:'Family-safe niche + adult links = contextual penalty trigger.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Exact Match Keyword',pct:'90%',col:'var(--red)',rule:'ATTACK PROFILE: All exact match — triggers Google unnatural link pattern detection'},
+      {type:'Naked URL',pct:'10%',col:'var(--muted)',rule:'Minimal variation to make pattern appear "accidental"'}
+    ],
+    anchorRules: 'NEGATIVE SEO ONLY: This anchor distribution is the opposite of what you would build for your own site. Maximum exact match concentration is the attack vector.',
+    velocity: [{mo:'Wk1',n:1000},{mo:'Wk2',n:5000},{mo:'Wk3',n:5000},{mo:'Wk4',n:3000},{mo:'Mo2',n:2000},{mo:'Mo3',n:1000}],
+    velocityNote: 'Negative SEO campaign front-loaded. Stop building after 6 weeks — continued building may alert Google that links are deliberate rather than organic spam.',
+    competitor: ['1. This IS a competitor attack strategy — entire purpose is ranking damage to specific competitor','2. Legal risk: actively harming a competitor\'s business is tortious interference in many jurisdictions','3. Ethical note: negative SEO is universally condemned — even within black hat community this is considered crossing a line'],
+    greyHat: 'BLACK HAT — COMPETITOR NEGATIVE SEO\n• ILLEGAL in many jurisdictions: tortious interference, computer fraud laws\n• ETHICAL: universally condemned even in black hat SEO community\n• EFFECTIVENESS: Large sites with active disavow monitoring are mostly immune\n• RISK TO YOU: If traced back = legal liability + your own domain potentially penalised\n• RECOMMENDATION: Do not use this strategy',
+    warnings: ['AVOID: Illegal in many jurisdictions — tortious interference and computer fraud charges possible','AVOID: If traced to you: YOUR domain may be penalised and business reputation destroyed','AVOID: Most established competitors have disavow monitoring — this is increasingly ineffective','AVOID: Even black hat SEOs consider this ethically beyond the line'],
+    siteFilter: s => s.t==='social' || s.t==='paste',
+    dailyMix: {social:50,paste:30,web20:20}
+  },
+
+  keyword_rank_squatting: {
+    name: '🎯 Keyword Rank Squatting',
+    tagline: 'Register exact-match domains and rank them against competitor brand keywords',
+    hat: 'black', risk: 75,
+    tags: ['EMD','Brand Squatting','Competitive'],
+    kpi: [{label:'Timeline',val:'2–6mo'},{label:'Effect',val:'SERP displacement'},{label:'Risk',val:'High'},{label:'Cost',val:'$50–$500 domain'},{label:'Best For',val:'Competitive Markets'}],
+    phases: [
+      {label:'Phase 1',title:'Identify High-Value Brand + Comparison Keywords',items:[],note:'Target keywords: "[competitor brand] vs [your brand]", "[competitor brand] alternative", "[competitor brand] review", "[competitor brand] pricing", "[competitor brand] discount". These are purchase-intent keywords where buyers are already considering competitor — intercept them at decision point.'},
+      {label:'Phase 2',title:'Register Exact-Match Domains',items:[],note:'Register: [competitorbrand]review.com, [competitorbrand]alternative.com, [competitorbrand]vs[yourbrand].com. Check: is domain name a registered trademark? Using trademarked terms in domain = trademark infringement risk. Consult legal counsel for your jurisdiction.'},
+      {label:'Phase 3',title:'Build Comparison Content That Ranks',items:[],note:'Content strategy: genuine comparison article, SEO-optimised for "[competitor] vs [you]" keywords, highlights where your product genuinely wins, includes legitimate pricing comparison, review aggregator schema, FAQ schema. Domain + exact match content = ranking in 60-90 days for long-tail comparison queries.'},
+      {label:'Phase 4',title:'Build Authority to the Squatter Domain',items:[],note:'Build 20-50 backlinks to the exact match domain: guest posts on review sites, directory submissions in software/SaaS directories, profile links. Even DA 20 EMD with 30 links can outrank strong competitors on comparison queries.'},
+      {label:'Phase 5',title:'Monetise via Conversion to Your Product',items:[],note:'Convert traffic: CTA for your product as the recommended alternative, email capture for comparison guide, affiliate link to your own product. Conversion rate on comparison keywords: 5-15% — among highest converting organic traffic segments.'}
+    ],
+    playbook: ['1. Research: [competitor name] + "alternative/review/vs/pricing" — check monthly search volume','2. Register exact match domains for top 3-5 target keywords','3. Build comparison content: genuine, detailed, SEO-optimised','4. Submit to 30-50 software review directories: Capterra, G2, Trustpilot, GetApp','5. Build 20+ backlinks via guest posts on tech/SaaS review blogs','6. Monitor rankings: target first-page for comparison keyword within 90 days','7. Ensure content is genuine: fake reviews can be reported to Google','8. Legal check: avoid domains using trademarked terms in certain formats','9. Track conversion: which comparison keyword drives most signups?','10. Expand: register domains for all top competitors in your market'],
+    tiers: [
+      {tier:'[Competitor] Alternative',label:'Highest purchase intent',desc:'Buyer actively seeking competitor replacement. Highest conversion.',col:'var(--green)'},
+      {tier:'[Competitor] Review',label:'Research-stage intent',desc:'Buyer evaluating competitor. Second highest conversion.',col:'var(--yellow)'},
+      {tier:'[Competitor] vs [You]',label:'Comparison intent',desc:'Direct head-to-head. Highly targeted — lower volume, high quality.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Partial Match',pct:'40%',col:'var(--yellow)',rule:'"[Competitor] alternative" — natural anchor for comparison page'},
+      {type:'Branded',pct:'30%',col:'var(--green)',rule:'Your brand name in the comparison context'},
+      {type:'Exact Match',pct:'20%',col:'var(--red)',rule:'"best [competitor] alternative" for targeted comparison ranking'},
+      {type:'Naked URL',pct:'10%',col:'var(--blue)',rule:'EMD URL as anchor on directory submissions'}
+    ],
+    anchorRules: 'Anchor text should reflect comparison framing. Avoid anchor text that could constitute trademark infringement — "[CompetitorTM] is bad" type anchors create legal exposure.',
+    velocity: [{mo:'Mo1',n:20},{mo:'Mo2',n:30},{mo:'Mo3',n:30},{mo:'Mo4',n:20},{mo:'Mo5',n:15},{mo:'Mo6',n:10},{mo:'Mo7',n:8},{mo:'Mo8',n:8},{mo:'Mo9',n:6}],
+    velocityNote: 'Front-load in first 3 months to establish authority quickly. Month 3+: EMD with quality content should rank for comparison keywords.',
+    competitor: ['1. This IS the competitor attack — registering domains to intercept their branded traffic','2. Monitor: if competitor files UDRP complaint against your domain — legal risk materialised','3. Defensive play: register your own "[yourbrand] alternative" domains before competitors do'],
+    greyHat: 'BLACK HAT — KEYWORD RANK SQUATTING\n• LEGAL RISK: Trademark infringement if competitor name is trademarked (usually is)\n• UDRP: Competitor can file domain dispute claim — you may lose domain\n• Google: EMD spam algorithm reduces value of exact match domains\n• Cybersquatting laws apply in US, EU, and most jurisdictions\n• Recommend: legal review before registering any competitor-branded domain',
+    warnings: ['WARN: High legal risk — most competitor brand names are trademarked','WARN: UDRP domain dispute could result in domain transfer to competitor','BEST: Comparison content strategy (without EMD) is white hat and safer alternative','WARN: EMD algorithm reduces ranking advantage — content quality matters more than exact match domain'],
+    siteFilter: s => s.da >= 30 && (s.t==='directory' || s.t==='profile'),
+    dailyMix: {directory:50,profile:35,social:15}
+  },
+
+  link_buying_broker: {
+    name: '💸 Link Buying via Broker Networks',
+    tagline: 'Bulk paid links through offshore broker networks and niche edit marketplaces',
+    hat: 'black', risk: 80,
+    tags: ['Paid Links','Broker','Niche Edits'],
+    kpi: [{label:'Timeline',val:'Days–2wks'},{label:'Links/Mo',val:'20–200'},{label:'Risk',val:'Very High'},{label:'Cost',val:'$50–$500/link'},{label:'Best For',val:'Aggressive Ranking Push'}],
+    phases: [
+      {label:'Phase 1',title:'Identify and Vet Broker Networks',items:['fatjoe.com','linkdaddy.com','links.garden','serpclix.com','getmentioned.com'],note:'Broker network vetting: check if they guarantee money-back if links lost, verify they use real sites not PBNs, check if sites have genuine organic traffic (SimilarWeb), look for sites that accept guest posts AND paid insertions (dual revenue = more legitimate content strategy).'},
+      {label:'Phase 2',title:'Prioritise Niche Edits Over New Posts',items:[],note:'Niche edits (link insertions in existing content) outperform new guest posts: existing page has established authority and backlinks, Google has already indexed and evaluated the page, link passes existing page PageRank immediately. Premium for niche edits is justified.'},
+      {label:'Phase 3',title:'Verify Each Site Before Payment',items:[],note:'Pre-payment checks: DA 40+ (Moz/Ahrefs), organic traffic 1000+/month (Ahrefs), indexed in Google (site: check), no "sponsored post" or "advertise here" visible links, topically relevant to your niche, real content not thin AI content.'},
+      {label:'Phase 4',title:'Manage Anchor Text Distribution Carefully',items:[],note:'Paid link anchor text is the highest-risk signal. Paid exact match anchors = unnatural anchor footprint. Distribute: 70% branded/naked URL, 20% partial match, 10% exact match maximum. Each paid link must fit into your overall anchor distribution model.'},
+      {label:'Phase 5',title:'Maintain Link and Diversify Sources',items:[],note:'Paid links often go "missing" after 6-12 months. Track every paid link monthly. For links lost: contact site, request restoration or replacement. Never buy from single broker — diversify across 3-5 sources. If Google manual review detects payment pattern: disavow immediately.'}
+    ],
+    playbook: ['1. Set budget: minimum $2000/month for meaningful velocity (40+ links at $50 average)','2. Identify 3-5 broker networks: vet all using criteria above','3. First order: 5-10 links from vetted sites — test quality before scaling','4. Verify delivery: check each link is live, indexable, real site','5. Manage anchor distribution: 70% branded/naked, 20% partial, 10% exact max','6. Build tracking spreadsheet: site, URL, anchor, date, cost, monthly live check','7. Monthly audit: check all paid links still live via Ahrefs backlink checker','8. Diversify: 3+ brokers, 3+ niches, varied anchor text per broker','9. If site removes link: contact, or accept loss and replace with different site','10. Emergency: if manual action warning in GSC — disavow all paid links immediately'],
+    tiers: [
+      {tier:'Niche Edits (DA 50+)',label:'Existing content, established authority',desc:'Best ROI. $200-500 per link. Strongest immediate authority transfer.',col:'var(--green)'},
+      {tier:'Guest Posts (DA 40-70)',label:'New content on niche-relevant sites',desc:'$100-300 per link. Custom content. Some topical control.',col:'var(--yellow)'},
+      {tier:'Sitewide/Network Links',label:'Footer, sidebar, network-wide',desc:'Avoid. Pattern detectable. Low individual value. High aggregate risk.',col:'var(--red)'}
+    ],
+    anchorMix: [
+      {type:'Branded',pct:'40%',col:'var(--green)',rule:'Brand name — safest paid link anchor, looks editorial'},
+      {type:'Naked URL',pct:'30%',col:'var(--blue)',rule:'URL as anchor — natural resource reference format'},
+      {type:'Partial Match',pct:'20%',col:'var(--yellow)',rule:'"[brand] [service]" format — moderate keyword signal'},
+      {type:'Exact Match',pct:'10%',col:'var(--red)',rule:'Maximum 10% — exceeding this in paid links triggers unnatural anchor flags'}
+    ],
+    anchorRules: 'Paid link anchor text is the most detectable signal. Never buy a "package" that uses the same anchor across all links. Each paid link anchor should be individually considered within your overall anchor distribution model.',
+    velocity: [{mo:'Mo1',n:20},{mo:'Mo2',n:40},{mo:'Mo3',n:40},{mo:'Mo4',n:50},{mo:'Mo5',n:50},{mo:'Mo6',n:40},{mo:'Mo7',n:40},{mo:'Mo8',n:30},{mo:'Mo9',n:30},{mo:'Mo10',n:30},{mo:'Mo11',n:30},{mo:'Mo12',n:30}],
+    velocityNote: 'Ramp paid link velocity slowly — sudden 50 links/month in month 1 creates unnatural velocity footprint. Ramp over 3 months.',
+    competitor: ['1. Identify competitor paid links via Ahrefs — look for links with "sponsored" or "contributor" near anchor','2. Buy links on same sites competitor paid for — direct parity acquisition','3. Find sites competitor paid that have since removed their links — contact for your link instead'],
+    greyHat: 'BLACK HAT — LINK BUYING VIA BROKER\n• Explicitly prohibited by Google: "Any links intended to manipulate PageRank"\n• Manual action risk: Google has dedicated teams identifying paid link networks\n• Broker network exposure: if broker is penalised, all clients in their network may be hit\n• Best protection: vet sites individually, never use one broker for all links',
+    warnings: ['WARN: Google manual actions specifically target paid link detection','WARN: Broker network exposure — if broker caught, all buyer sites may be reported','BEST: When well-managed, paid links produce fastest ranking results of any link type','WARN: Track every paid link — if manual action issued, disavow file needed immediately'],
+    siteFilter: s => s.da >= 50 && (s.t==='guest' || s.t==='directory'),
+    dailyMix: {guest:70,directory:20,profile:10}
+  },
+
+  mass_comment_spam: {
+    name: '💬 Mass Comment Spam Automation',
+    tagline: 'XRumer/GSA comment blast across 100,000+ sites for Tier 2 and Tier 3 volume',
+    hat: 'black', risk: 85,
+    tags: ['Comment Spam','Automated','Volume'],
+    kpi: [{label:'Timeline',val:'Hours–Days'},{label:'Links',val:'100k–10M'},{label:'Risk',val:'Extreme (direct)'},{label:'Cost',val:'$100–$500 tool'},{label:'Best For',val:'Tier 3 ONLY'}],
+    phases: [
+      {label:'Phase 1',title:'Configure XRumer or GSA for Comment Blast',items:[],note:'XRumer: highest quality comment spam tool, CAPTCHA solving built-in, forum/blog/guestbook blasting. GSA SER: broader platform support, more flexible targeting. Both require: dedicated VPS, 100+ private proxies, verified email accounts, spun content library.'},
+      {label:'Phase 2',title:'Build or Purchase Comment Spam Site Lists',items:[],note:'Source site lists: GSA SER community platform updates, Blackhatworld list shares, scrape fresh lists via Google footprints (inurl:blog "post a comment" intitle:"add comment"). Fresh lists (7 days) perform better than recycled 2-year-old lists with burnt domains.'},
+      {label:'Phase 3',title:'Prepare Spun Comment Templates',items:[],note:'Comment templates: 5-10 spin variations per comment type, include anchor text at natural position, vary URL format (naked, branded, partial match), vary comment length (15-50 words). Default comment spam templates are universally blacklisted — custom templates improve success rate 3-5x.'},
+      {label:'Phase 4',title:'Run Blast to Tier 2/3 Properties ONLY',items:[],note:'ABSOLUTE RULE: Comment spam never targets money site. Target ONLY: Tier 2 Web 2.0s, Tier 3 profiles and social bookmarks, non-index URLs that pass equity up the chain. If comment spam links appear in money site profile: manual action risk is extreme.'},
+      {label:'Phase 5',title:'Force Indexation of Comment Links',items:[],note:'Comment links have very low indexation rate. Use: automated pinger (GSA SER ping module), social bookmarks on comment URLs (another automated layer), indexing services. Target 5-10% indexation — 100,000 comments x 8% = 8,000 indexed Tier 3 links amplifying Tier 2.'}
+    ],
+    playbook: ['1. Set up VPS — never run comment spam from personal IP','2. Purchase 100+ private proxies — rotate per request','3. Source fresh site lists — less than 7 days old','4. Write 20+ custom comment templates with spin syntax','5. Set blast rate: 10,000-50,000 attempts/day (most fail CAPTCHA)','6. Target: Tier 2 URLs only — never money site','7. Run indexer on successful comment URLs','8. Monitor Tier 1 and money site: confirm no comment spam appearing in their profiles','9. After 30 days: check money site rankings for indirect benefit','10. Replace VPS and proxies monthly — footprint reduction'],
+    tiers: [
+      {tier:'Tier 3 Blast (Safest)',label:'Amplify Tier 2 properties',desc:'No connection to money site. Maximum safe volume.',col:'var(--yellow)'},
+      {tier:'Tier 2 Blast (Risky)',label:'Amplify Tier 1 Web 2.0s',desc:'Risk: Tier 1 deindexed if over-blasted. 500 max per URL.',col:'var(--red)'},
+      {tier:'Direct to Money Site',label:'DO NOT DO THIS',desc:'Immediate manual action risk. Never use comment spam on money site.',col:'var(--red)'}
+    ],
+    anchorMix: [
+      {type:'Generic/Random',pct:'55%',col:'var(--muted)',rule:'"great post", "useful info", "thanks" — reduces spam filter detection'},
+      {type:'Naked URL',pct:'30%',col:'var(--blue)',rule:'Tier 2 URL as anchor — standard comment link format'},
+      {type:'Branded',pct:'10%',col:'var(--green)',rule:'Brand name occasional variation'},
+      {type:'Exact Match',pct:'5%',col:'var(--red)',rule:'Absolute minimum — exact match in comment spam is instantly detectable'}
+    ],
+    anchorRules: 'Comment spam anchor text is a secondary concern — most comment spam links are nofollow or instantly deindexed. Focus on volume and indexation rate over anchor optimisation.',
+    velocity: [{mo:'Wk1',n:50000},{mo:'Wk2',n:100000},{mo:'Wk3',n:100000},{mo:'Wk4',n:80000},{mo:'Mo2',n:200000},{mo:'Mo3',n:200000},{mo:'Mo4',n:150000},{mo:'Mo5',n:100000},{mo:'Mo6',n:100000}],
+    velocityNote: 'Numbers shown are ATTEMPTS not verified links. Actual verified links: 5-15% of attempts. Indexed links: 5-10% of verified. 1,000,000 attempts = ~75,000 verified = ~7,500 indexed Tier 3 links.',
+    competitor: ['1. Comment spam is indiscriminate — competitor analysis irrelevant at this tier','2. If competitor is using comment spam at Tier 2: their Tier 1 properties are vulnerable to analysis','3. Detect competitor comment spam footprints via Ahrefs anchor cloud — mass comment spike is visible'],
+    greyHat: 'BLACK HAT — MASS COMMENT SPAM\n• EXTREME violation of Google guidelines\n• Direct to money site = near-certain manual action\n• Tier 2/3 use: low money site risk but Tier 1/2 may be deindexed\n• Most comment links are nofollow — benefit only through indexed dofollow subset\n• Use only as Tier 3 volume amplification for Tier 2 links',
+    warnings: ['AVOID: Direct to money site — extreme manual action risk','WARN: Tier 2 blast can deindex Tier 1 if volume too high','WARN: ISP and proxy bans common — use dedicated VPS and private proxies only','NOTE: Most comment links are nofollow — this is a volume play, not a quality play'],
+    siteFilter: s => s.t==='comment' || s.t==='guestbook' || s.t==='forum',
+    dailyMix: {comment:60,guestbook:25,forum:15}
+  },
+
+  cloaked_redirect_network: {
+    name: '🎭 Cloaked Redirect Network',
+    tagline: 'Cloaked pages showing Googlebot different content than users for ranking manipulation',
+    hat: 'black', risk: 98,
+    tags: ['Cloaking','Redirect','Illegal'],
+    kpi: [{label:'Timeline',val:'Days'},{label:'Effect',val:'Rapid ranking'},{label:'Risk',val:'EXTREME'},{label:'Cost',val:'Dev Time'},{label:'Best For',val:'AVOID ENTIRELY'}],
+    phases: [
+      {label:'Phase 1',title:'Understand Why Cloaking Is Extreme Risk',items:[],note:'Cloaking is serving different content to Googlebot than to users. Google: explicitly states cloaking = site removal from index (not just penalty — full deindex). Detection: Google uses shadow browsers that mimic user agents while actually being Googlebot. Detection rate: very high for standard implementations.'},
+      {label:'Phase 2',title:'Common Cloaking Implementations (For Defense)',items:[],note:'Understanding attack vectors for defensive disavowal: IP-based cloaking (show spam to Googlebot IPs), user-agent cloaking (detect Googlebot header), redirect cloaking (301 to different URL for crawlers), CSS cloaking (keyword-stuffed text hidden from users via display:none or off-screen positioning).'},
+      {label:'Phase 3',title:'Redirect Network Architecture',items:[],note:'Cloaked redirect network: tier of expired domains 301-redirecting to money site, but showing Googlebot keyword-stuffed content at the redirect domain before passing. Architecture: expired domain (DA 40+) → serves keyword content to Googlebot → 301 to money site. Users see transparent redirect.'},
+      {label:'Phase 4',title:'Cloaking via Hacked Sites (Illegal)',items:[],note:'WARNING: Hacked site cloaking — injecting cloaked pages into compromised third-party websites — is computer fraud and hacking. Criminal charges apply. This section is educational only. Google aggressively hunts hacked site spam and notifies webmasters immediately.'},
+      {label:'Phase 5',title:'Detection and Immediate Deindex',items:[],note:'Google deindex process: cloaking detected → site flagged → manual review → full domain removal from index. Recovery: impossible without full rebuild and reconsideration request detailing complete removal of cloaking. Recovery rate: very low.'}
+    ],
+    playbook: ['1. STRONGLY RECOMMENDED: Do not implement cloaking','2. If forced to understand for defensive purposes: Google Webmaster Guidelines detail the exact definitions','3. Check own site for accidental cloaking: different render for JS-blocked crawlers is effectively cloaking','4. Use Google Search Console → URL Inspection → render Googlebot view to verify no unintended cloaking','5. If competitor is cloaking: report via Google Webspam report (webmasters.googleblog.com)'],
+    tiers: [
+      {tier:'Own Site — CSS/JS Cloaking',label:'Hidden text, display:none, off-screen',desc:'Moderate risk. Accidental in some CMS implementations.',col:'var(--yellow)'},
+      {tier:'Redirect Cloaking',label:'User-agent based redirect serving',desc:'Very high risk. Clear guideline violation.',col:'var(--red)'},
+      {tier:'Hacked Site Injection',label:'Criminal offence',desc:'Computer fraud. Criminal charges. Google deindex guaranteed.',col:'var(--red)'}
+    ],
+    anchorMix: [
+      {type:'N/A — Cloaking risk profile',pct:'100%',col:'var(--red)',rule:'Cloaking operates at page content level, not anchor text. Risk profile overrides all anchor considerations.'}
+    ],
+    anchorRules: 'CLOAKING: This strategy carries full site deindex risk. Anchor text optimisation is irrelevant when the fundamental risk is complete removal from Google index.',
+    velocity: [{mo:'Mo1',n:0}],
+    velocityNote: 'Not recommended. Shown for educational awareness only.',
+    competitor: ['1. If competitor is cloaking: report to Google via spam report — their site will be deindexed','2. Check competitor site via Google Cache vs live version — differences indicate cloaking','3. Cloaking by competitor is an opportunity: one spam report can eliminate their entire ranking presence'],
+    greyHat: 'BLACK HAT — CLOAKED REDIRECT NETWORK\n• MAXIMUM RISK: Full domain deindex, not penalty\n• Hacked site cloaking = criminal charges in most jurisdictions\n• Google\'s detection systems are specifically designed to catch this\n• Recovery is extremely difficult after deindex for cloaking\n• RECOMMENDATION: NEVER USE THIS STRATEGY',
+    warnings: ['AVOID: Highest risk strategy in SEO — full deindex is the standard penalty','AVOID: Hacked site cloaking is criminal — computer fraud charges','AVOID: Recovery from cloaking penalty is extremely difficult','NOTE: Described here for educational awareness and defensive recognition only'],
+    siteFilter: s => s.t==='social',
+    dailyMix: {social:100}
+  },
+
+  pbn_footprint_elimination: {
+    name: '🔍 PBN Footprint Elimination',
+    tagline: 'Advanced techniques to make existing PBN properties invisible to Google footprint detection',
+    hat: 'black', risk: 65,
+    tags: ['PBN','Footprint','Stealth'],
+    kpi: [{label:'Timeline',val:'1–3mo'},{label:'Effect',val:'Reduced deindex risk'},{label:'Risk',val:'High'},{label:'Cost',val:'$500–$5000/mo'},{label:'Best For',val:'Existing PBN Owners'}],
+    phases: [
+      {label:'Phase 1',title:'Audit Existing PBN for Common Footprints',items:[],note:'Common PBN footprints: same hosting IP range across properties, same registrar and registration pattern, identical WordPress theme/plugins, identical content structure, same Analytics/Adsense codes, same contact or WHOIS data. Run each PBN domain through reverse IP lookup — if 5+ of your PBNs share same /24 IP block: visible footprint.'},
+      {label:'Phase 2',title:'Diversify Hosting Across Multiple Providers',items:[],note:'Minimum hosting diversity: 1 domain per /24 IP block. Use: DigitalOcean (multiple data centers), Vultr, Linode, Cloudways on different underlying hosts, country-specific hosting for geographic diversity. Never use same C-class IP for 2 PBN domains. Cost: $5-10/month per PBN site.'},
+      {label:'Phase 3',title:'Separate Registrar and WHOIS Patterns',items:[],note:'Registration footprints: same registrar + same registration date + same privacy service = obvious network. Use: different registrars per 5-10 domains (Namecheap, Godaddy, Hover, Gandi, Porkbun), stagger registration dates, WHOIS privacy on all but some with fake real data, different payment methods per registrar.'},
+      {label:'Phase 4',title:'Unique Technical Signature Per Domain',items:[],note:'Technical diversity: different CMS (WordPress/Joomla/Drupal/static HTML), different themes (custom minimal, no theme marketplace patterns), different plugins per site, unique Analytics code per property, different CDN (Cloudflare, BunnyCDN, manual), robots.txt variations.'},
+      {label:'Phase 5',title:'Build Natural-Looking Site Activity',items:[],note:'Footprint elimination requires ongoing activity on PBN sites: publish genuine content (not AI-generated at scale — Google detects content farm patterns), build some non-money-site outbound links, occasional internal links, genuine meta diversity. A PBN site with 200 posts all linking to one domain = obvious purpose.'}
+    ],
+    playbook: ['1. Audit all PBN IPs: check /24 IP block overlap — move domains on shared ranges','2. Document current footprints: registrar, host, theme, plugin, content style','3. Create diversification plan: move each PBN domain to unique host/registrar over 90 days','4. Build custom minimal themes per domain or buy unique themeforest licenses per site','5. Create unique Analytics property per PBN domain — never cross-contaminate','6. Add genuine outbound links to non-money-site authority sources on each PBN','7. Stagger PBN publication dates — daily or weekly, not all-at-once mass publish','8. Add real contact pages (use privacy services), unique About pages','9. Never link from all PBN properties to same target page at same time','10. Annual audit: re-check IP/registrar diversity as hosting providers change'],
+    tiers: [
+      {tier:'Hosting Diversity',label:'1 domain per /24 IP block',desc:'Most important footprint. Same IP block = instant network detection.',col:'var(--red)'},
+      {tier:'Content Diversity',label:'Unique themes, plugins, content style',desc:'Secondary footprint. Identical WordPress installs = pattern detection.',col:'var(--yellow)'},
+      {tier:'Activity Diversity',label:'Genuine content, outbound links, real meta',desc:'Tertiary footprint. Ghost PBNs with only money-site links = obvious.',col:'var(--muted)'}
+    ],
+    anchorMix: [
+      {type:'Branded',pct:'40%',col:'var(--green)',rule:'PBN to money site: branded anchor — safest, editorial-looking'},
+      {type:'Partial Match',pct:'35%',col:'var(--yellow)',rule:'Contextual partial match — appears editorial'},
+      {type:'Exact Match',pct:'15%',col:'var(--red)',rule:'Use sparingly — even from PBN, over-optimisation is detectable'},
+      {type:'Naked URL',pct:'10%',col:'var(--blue)',rule:'URL format — natural resource reference'}
+    ],
+    anchorRules: 'PBN anchor text must be varied across properties. Pattern: if all 20 PBN sites use same exact match anchor → pattern-match detection. Each PBN should have unique anchor for the money site link.',
+    velocity: [{mo:'Mo1',n:0},{mo:'Mo2',n:0},{mo:'Mo3',n:0},{mo:'Mo4',n:5},{mo:'Mo5',n:5},{mo:'Mo6',n:5},{mo:'Mo7',n:5},{mo:'Mo8',n:5},{mo:'Mo9',n:5},{mo:'Mo10',n:5},{mo:'Mo11',n:5},{mo:'Mo12',n:5}],
+    velocityNote: 'Not a link acquisition strategy — footprint elimination produces no new links. Month 4+: existing PBN links become safer and less likely to be deindexed.',
+    competitor: ['1. Analyse competitor PBNs via Ahrefs — common hosting, theme, content patterns are footprints','2. Once competitor PBN footprint identified — report via Google spam report (nuclear option)','3. Your own PBN differentiation makes it harder for competitors to identify and report your network'],
+    greyHat: 'BLACK HAT — PBN FOOTPRINT ELIMINATION\n• Entire strategy is deception of Google at infrastructure level\n• Even well-hidden PBNs carry ongoing deindex risk\n• Google machine learning continuously improves network detection\n• Risk level: HIGH even with maximum footprint reduction\n• Recommendation: if building new, invest in white hat instead',
+    warnings: ['WARN: PBN deindex risk never reaches zero regardless of footprint management','WARN: Google ML detection improves continuously — historical footprint elimination becomes less effective over time','BEST: For existing PBN owners: footprint elimination is necessary maintenance, not optional','WARN: Single manual review of money site backlinks can unravel entire PBN if quality is poor'],
+    siteFilter: s => s.t==='web20' || s.t==='profile',
+    dailyMix: {web20:60,profile:30,social:10}
+  }
+
 
 
 };
@@ -12567,7 +13390,7 @@ function renderStratSites(sites){
         <span class="b ${s.da>=90?'b-da90':s.da>=80?'b-da80':s.da>=70?'b-da70':'b-da50'}">DA ${s.da}</span>
         <span class="b b-${s.f==='dofollow'?'df':'nf'}">${s.f==='dofollow'?'✅DF':'NF'}</span>
         <span class="b b-type">${s.t}</span>
-        <span class="b b-${s.d}">${s.d}</span>
+        <span class="b ${ s.d==='easy'?'b-easy':s.d==='hard'?'b-hard':'b-med' }">${s.d}</span>
         <span class="b b-${s.c}">${s.c==='free'?'🆓':'💰'}</span>
         ${progress[s.u]?'<span style="color:var(--green);font-size:.65rem">✅done</span>':''}
       </div>
@@ -12713,10 +13536,8 @@ function renderTaskQueue(){
       <div class="dm-task-meta">
         <span class="b ${s.da>=90?'b-da90':s.da>=80?'b-da80':s.da>=70?'b-da70':'b-da50'}">DA ${s.da}</span>
         <span class="b b-${s.f==='dofollow'?'df':'nf'}">${s.f==='dofollow'?'DF':'NF'}</span>
-        <span class="b b-${s.d}">${s.d}</span>
+        <span class="b ${ s.d==='easy'?'b-easy':s.d==='hard'?'b-hard':'b-med' }">${s.d}</span>
         <span class="b b-free">~${s.tm}min</span>
-      </div>
-      <div class="dm-task-note">${(s.n||'').slice(0,100)}${(s.n||'').length>100?'…':''}</div>
       <div class="dm-task-actions">
         <button class="dm-task-btn done-btn" onclick="dmMarkDone(${i},'${s.u.replace(/'/g,"\\\'")}')">✅ Done</button>
         <a href="https://${s.u}" target="_blank" class="dm-task-btn" style="text-decoration:none;display:inline-block">↗ Visit</a>
